@@ -9,6 +9,7 @@ import {
   type NodeChange,
   type XYPosition,
 } from '@xyflow/react';
+import { stratify, tree } from 'd3-hierarchy';
 import { create } from 'zustand';
 
 export type MindMapNodeData = {
@@ -30,6 +31,11 @@ type CreateNodeInput = {
 
 type FocusDirection = 'up' | 'down' | 'left' | 'right';
 
+type LayoutEntry = {
+  id: string;
+  parentId: string | null;
+};
+
 type MindMapState = {
   nodes: MindMapNode[];
   edges: MindMapEdge[];
@@ -46,6 +52,7 @@ type MindMapState = {
   updateNodeLabel: (nodeId: string, label: string) => void;
   moveFocus: (direction: FocusDirection) => void;
   updateNodeParent: (nodeId: string, newParentId: string) => void;
+  applyAutoLayout: () => void;
 };
 
 export const getSelectedNode = (nodes: MindMapNode[]) => nodes.find((node) => node.selected);
@@ -107,6 +114,12 @@ const compareByDistanceThenOrder = (
 
   return leftDistance - rightDistance || (nodeOrder.get(left.id) ?? 0) - (nodeOrder.get(right.id) ?? 0);
 };
+
+const getLayoutEntries = (nodes: MindMapNode[], edges: MindMapEdge[]) =>
+  nodes.map((node) => ({
+    id: node.id,
+    parentId: node.id === ROOT_NODE_ID ? null : getParentId(node.id, edges) ?? ROOT_NODE_ID,
+  }));
 
 export const useStore = create<MindMapState>((set, get) => ({
   ...createInitialGraph(),
@@ -372,6 +385,28 @@ export const useStore = create<MindMapState>((set, get) => ({
             target: nodeId,
           },
         ],
+      };
+    }),
+  applyAutoLayout: () =>
+    set((state) => {
+      const hierarchy = stratify<LayoutEntry>()(getLayoutEntries(state.nodes, state.edges));
+      const laidOutRoot = tree<LayoutEntry>().nodeSize([100, 300])(hierarchy);
+      const positions = new Map(
+        laidOutRoot.descendants().map((node) => [
+          node.id,
+          {
+            x: node.y,
+            y: node.x,
+          },
+        ]),
+      );
+
+      return {
+        nodes: state.nodes.map((node) => ({
+          ...node,
+          position: positions.get(node.id) ?? node.position,
+        })),
+        edges: state.edges,
       };
     }),
 }));
