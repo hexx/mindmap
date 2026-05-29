@@ -26,6 +26,7 @@ export default function App() {
   const onConnect = useStore((state) => state.onConnect);
   const addChildNode = useStore((state) => state.addChildNode);
   const addSiblingNode = useStore((state) => state.addSiblingNode);
+  const moveFocus = useStore((state) => state.moveFocus);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
   const nodeTypes = useMemo<NodeTypes>(
@@ -37,6 +38,30 @@ export default function App() {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        moveFocus('up');
+        return;
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        moveFocus('down');
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        moveFocus('left');
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        moveFocus('right');
+        return;
+      }
+
       if (!selectedNode) {
         return;
       }
@@ -61,7 +86,7 @@ export default function App() {
         }
       }
     },
-    [addChildNode, addSiblingNode, removeNode, selectedNode],
+    [addChildNode, addSiblingNode, moveFocus, removeNode, selectedNode],
   );
 
   const handleExportOrgMode = useCallback(() => {

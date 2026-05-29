@@ -28,6 +28,8 @@ type CreateNodeInput = {
   id?: string;
 };
 
+type FocusDirection = 'up' | 'down' | 'left' | 'right';
+
 type MindMapState = {
   nodes: MindMapNode[];
   edges: MindMapEdge[];
@@ -42,6 +44,7 @@ type MindMapState = {
   addSiblingNode: (nodeId: string) => string | null;
   removeNode: (nodeId: string) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
+  moveFocus: (direction: FocusDirection) => void;
 };
 
 export const getSelectedNode = (nodes: MindMapNode[]) => nodes.find((node) => node.selected);
@@ -84,6 +87,22 @@ const collectDescendants = (nodeId: string, edges: MindMapEdge[]) => {
   }
 
   return descendantIds;
+};
+
+const getNodeOrder = (nodes: MindMapNode[]) => new Map(nodes.map((node, index) => [node.id, index]));
+
+const compareByYThenOrder = (nodeOrder: Map<string, number>) => (left: MindMapNode, right: MindMapNode) =>
+  left.position.y - right.position.y || (nodeOrder.get(left.id) ?? 0) - (nodeOrder.get(right.id) ?? 0);
+
+const compareByDistanceThenOrder = (
+  currentY: number,
+  nodeOrder: Map<string, number>,
+  direction: 'up' | 'down',
+) => (left: MindMapNode, right: MindMapNode) => {
+  const leftDistance = direction === 'up' ? currentY - left.position.y : left.position.y - currentY;
+  const rightDistance = direction === 'up' ? currentY - right.position.y : right.position.y - currentY;
+
+  return leftDistance - rightDistance || (nodeOrder.get(left.id) ?? 0) - (nodeOrder.get(right.id) ?? 0);
 };
 
 export const useStore = create<MindMapState>((set, get) => ({
@@ -258,4 +277,61 @@ export const useStore = create<MindMapState>((set, get) => ({
           : node,
       ),
     })),
+  moveFocus: (direction) =>
+    set((state) => {
+      const selectedNode = getSelectedNode(state.nodes);
+
+      if (!selectedNode) {
+        return state;
+      }
+
+      const nodesById = new Map(state.nodes.map((node) => [node.id, node] as const));
+      const nodeOrder = getNodeOrder(state.nodes);
+      const parentId = state.edges.find((edge) => edge.target === selectedNode.id)?.source;
+
+      let nextSelectedNode: MindMapNode | undefined;
+
+      switch (direction) {
+        case 'left':
+          nextSelectedNode = parentId ? nodesById.get(parentId) : undefined;
+          break;
+        case 'right': {
+          const childNodes = state.edges
+          .filter((edge) => edge.source === selectedNode.id)
+          .map((edge) => nodesById.get(edge.target))
+          .filter((node): node is MindMapNode => Boolean(node));
+
+          nextSelectedNode = childNodes.sort(compareByYThenOrder(nodeOrder))[0];
+          break;
+        }
+        case 'up':
+        case 'down': {
+          if (!parentId) {
+          break;
+          }
+
+          const siblingNodes = state.edges
+          .filter((edge) => edge.source === parentId && edge.target !== selectedNode.id)
+          .map((edge) => nodesById.get(edge.target))
+          .filter((node): node is MindMapNode => Boolean(node))
+          .filter((node) => (direction === 'up' ? node.position.y < selectedNode.position.y : node.position.y > selectedNode.position.y))
+          .sort(compareByDistanceThenOrder(selectedNode.position.y, nodeOrder, direction));
+
+          nextSelectedNode = siblingNodes[0];
+          break;
+        }
+      }
+
+      if (!nextSelectedNode) {
+        return state;
+      }
+
+      return {
+        nodes: state.nodes.map((node) => ({
+          ...node,
+          selected: node.id === nextSelectedNode.id,
+        })),
+        edges: state.edges,
+      };
+    }),
 }));
