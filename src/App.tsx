@@ -90,6 +90,7 @@ export default function App() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onKeyDown={handleKeyDown}
+        deleteKeyCode={null}
         fitView
         minZoom={0.25}
         className="mindmap-flow"

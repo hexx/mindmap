@@ -3,7 +3,7 @@ import {
   Position,
   type NodeProps,
 } from '@xyflow/react';
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { type MindMapNode as MindMapFlowNode, useStore } from '../store/useStore';
 
 export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlowNode>) {
@@ -36,6 +36,16 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
     setIsEditing(true);
   }, [data.label]);
 
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== ' ' && event.key !== 'Spacebar') {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    setIsEditing(true);
+  }, []);
+
   return (
     <div
       className={[
@@ -44,6 +54,7 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
         isEditing ? 'mindmap-node--editing' : '',
       ].join(' ')}
       onDoubleClick={handleDoubleClick}
+      onKeyDown={handleKeyDown}
     >
       <Handle type="target" position={Position.Left} className="mindmap-node__handle" />
       {isEditing ? (
