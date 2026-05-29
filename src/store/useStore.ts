@@ -47,10 +47,8 @@ type MindMapState = {
 export const getSelectedNode = (nodes: MindMapNode[]) => nodes.find((node) => node.selected);
 
 const createNodeId = () => {
-  const randomUUID = globalThis.crypto?.randomUUID;
-
-  if (typeof randomUUID === 'function') {
-    return randomUUID();
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
   }
 
   return `node-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
