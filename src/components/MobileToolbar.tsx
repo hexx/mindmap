@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, type PointerEvent } from 'react';
 import { getSelectedNode, ROOT_NODE_ID, useStore } from '../store/useStore';
 
 export default function MobileToolbar() {
@@ -8,7 +8,10 @@ export default function MobileToolbar() {
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
 
-  const handleAddChildNode = useCallback(() => {
+  const handleAddChildNode = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     if (!selectedNode) {
       return;
     }
@@ -16,7 +19,10 @@ export default function MobileToolbar() {
     addChildNode(selectedNode.id);
   }, [addChildNode, selectedNode]);
 
-  const handleAddSiblingNode = useCallback(() => {
+  const handleAddSiblingNode = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     if (!selectedNode) {
       return;
     }
@@ -24,7 +30,10 @@ export default function MobileToolbar() {
     addSiblingNode(selectedNode.id);
   }, [addSiblingNode, selectedNode]);
 
-  const handleRemoveNode = useCallback(() => {
+  const handleRemoveNode = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     if (!selectedNode) {
       return;
     }
@@ -37,16 +46,21 @@ export default function MobileToolbar() {
 
   return (
     <div className="mobile-toolbar" aria-label="モバイル用ノード操作">
-      <button type="button" className="mobile-toolbar__button" onClick={handleAddChildNode} disabled={isDisabled}>
+      <button type="button" className="mobile-toolbar__button" onPointerDown={handleAddChildNode} disabled={isDisabled}>
         子ノード追加
       </button>
-      <button type="button" className="mobile-toolbar__button" onClick={handleAddSiblingNode} disabled={isDisabled}>
+      <button
+        type="button"
+        className="mobile-toolbar__button"
+        onPointerDown={handleAddSiblingNode}
+        disabled={isDisabled || isRootSelected}
+      >
         兄弟ノード追加
       </button>
       <button
         type="button"
         className="mobile-toolbar__button mobile-toolbar__button--danger"
-        onClick={handleRemoveNode}
+        onPointerDown={handleRemoveNode}
         disabled={isDisabled || isRootSelected}
       >
         削除
