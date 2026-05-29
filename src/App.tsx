@@ -6,6 +6,7 @@ import {
   type NodeTypes,
 } from '@xyflow/react';
 import { useCallback, useMemo, type KeyboardEvent } from 'react';
+import MobileToolbar from './components/MobileToolbar';
 import MindMapNodeComponent from './nodes/MindMapNode';
 import { exportOrgMode } from './utils/exportOrgMode';
 import {
@@ -100,6 +101,7 @@ export default function App() {
       <button type="button" className="org-export-button" onClick={handleExportOrgMode}>
         org-modeでエクスポート
       </button>
+      <MobileToolbar />
     </div>
   );
 }
