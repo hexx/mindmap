@@ -3,7 +3,7 @@ import {
   Position,
   type NodeProps,
 } from '@xyflow/react';
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { type MindMapNode as MindMapFlowNode, useStore } from '../store/useStore';
 
 export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlowNode>) {
@@ -36,10 +36,6 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
     setIsEditing(true);
   }, [data.label]);
 
-  const stopCanvasEvents = useCallback((event: SyntheticEvent) => {
-    event.stopPropagation();
-  }, []);
-
   return (
     <div
       className={[
@@ -48,8 +44,6 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
         isEditing ? 'mindmap-node--editing' : '',
       ].join(' ')}
       onDoubleClick={handleDoubleClick}
-      onMouseDown={stopCanvasEvents}
-      onPointerDown={stopCanvasEvents}
     >
       <Handle type="target" position={Position.Left} className="mindmap-node__handle" />
       {isEditing ? (
