@@ -11,6 +11,7 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
   const [isEditing, setIsEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(data.label);
   const inputRef = useRef<HTMLInputElement>(null);
+  const didInitializeRef = useRef(false);
 
   useEffect(() => {
     if (!isEditing) {
@@ -25,6 +26,18 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
     }
   }, [isEditing]);
 
+  useEffect(() => {
+    if (didInitializeRef.current) {
+      return;
+    }
+
+    didInitializeRef.current = true;
+
+    if (data.label === '') {
+      setIsEditing(true);
+    }
+  }, [data.label]);
+
   const commitLabel = useCallback(() => {
     updateNodeLabel(id, draftLabel);
     setIsEditing(false);
@@ -37,12 +50,20 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
   }, [data.label]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== ' ' && event.key !== 'Spacebar') {
+    if (event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsEditing(true);
+      return;
+    }
+
+    if (event.key.length !== 1) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
+    setDraftLabel(event.key);
     setIsEditing(true);
   }, []);
 
