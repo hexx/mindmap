@@ -7,6 +7,7 @@ import {
 } from '@xyflow/react';
 import { useCallback, useMemo, type KeyboardEvent } from 'react';
 import MindMapNodeComponent from './nodes/MindMapNode';
+import { exportOrgMode } from './utils/exportOrgMode';
 import {
   MINDMAP_NODE_TYPE,
   ROOT_NODE_ID,
@@ -62,6 +63,22 @@ export default function App() {
     [addChildNode, addSiblingNode, removeNode, selectedNode],
   );
 
+  const handleExportOrgMode = useCallback(() => {
+    const content = exportOrgMode(nodes, edges);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+
+    anchor.href = downloadUrl;
+    anchor.download = 'mindmap.org';
+    anchor.style.display = 'none';
+
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  }, [edges, nodes]);
+
   return (
     <div className="app-shell">
       <ReactFlow<MindMapNode, MindMapEdge>
@@ -80,6 +97,9 @@ export default function App() {
         <Controls />
         <MiniMap zoomable pannable />
       </ReactFlow>
+      <button type="button" className="org-export-button" onClick={handleExportOrgMode}>
+        org-modeでエクスポート
+      </button>
     </div>
   );
 }
