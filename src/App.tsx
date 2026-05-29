@@ -38,30 +38,6 @@ export default function App() {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        moveFocus('up');
-        return;
-      }
-
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        moveFocus('down');
-        return;
-      }
-
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        moveFocus('left');
-        return;
-      }
-
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        moveFocus('right');
-        return;
-      }
-
       if (!selectedNode) {
         return;
       }
@@ -86,7 +62,40 @@ export default function App() {
         }
       }
     },
-    [addChildNode, addSiblingNode, moveFocus, removeNode, selectedNode],
+    [addChildNode, addSiblingNode, removeNode, selectedNode],
+  );
+
+  const handleKeyDownCapture = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        event.stopPropagation();
+        moveFocus('up');
+        return;
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        event.stopPropagation();
+        moveFocus('down');
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        event.stopPropagation();
+        moveFocus('left');
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        event.stopPropagation();
+        moveFocus('right');
+        return;
+      }
+    },
+    [moveFocus],
   );
 
   const handleExportOrgMode = useCallback(() => {
@@ -114,6 +123,7 @@ export default function App() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onKeyDownCapture={handleKeyDownCapture}
         onKeyDown={handleKeyDown}
         deleteKeyCode={null}
         fitView
