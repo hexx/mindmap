@@ -50,8 +50,6 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
       onDoubleClick={handleDoubleClick}
       onMouseDown={stopCanvasEvents}
       onPointerDown={stopCanvasEvents}
-      onKeyDown={stopCanvasEvents}
-      onKeyUp={stopCanvasEvents}
     >
       <Handle type="target" position={Position.Left} className="mindmap-node__handle" />
       {isEditing ? (
