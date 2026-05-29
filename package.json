@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "npm run build && wrangler deploy",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "typescript": "^6.0.3",
-    "vite": "^8.0.14"
+    "vite": "^8.0.14",
+    "wrangler": "^4.95.0"
   }
 }

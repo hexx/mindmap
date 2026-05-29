@@ -1,0 +1,8 @@
+name = "mindmap"
+compatibility_date = "2026-05-29"
+assets = { directory = "dist" }
+
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "mindmap"
+# database_id = "replace-with-your-d1-database-id"

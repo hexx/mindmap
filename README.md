@@ -28,6 +28,15 @@ npm run build
 npm run preview
 ```
 
+### 5. Cloudflare Workers へのデプロイ
+
+```bash
+npm install -D wrangler
+npm run deploy
+```
+
+Cloudflare D1 を使う場合は `wrangler.toml` の `[[d1_databases]]` を有効化してください。
+
 ## 操作方法
 
 - ノードを **ダブルクリック** するとラベル編集に入ります。
