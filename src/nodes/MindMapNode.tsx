@@ -11,7 +11,9 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
   const [isEditing, setIsEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(data.label);
   const inputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const didInitializeRef = useRef(false);
+  const wasEditingRef = useRef(isEditing);
 
   useEffect(() => {
     if (!isEditing) {
@@ -24,6 +26,14 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
       inputRef.current?.focus();
       inputRef.current?.select();
     }
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (wasEditingRef.current && !isEditing) {
+      buttonRef.current?.focus();
+    }
+
+    wasEditingRef.current = isEditing;
   }, [isEditing]);
 
   useEffect(() => {
@@ -101,6 +111,7 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
       ) : (
         <button
           type="button"
+          ref={buttonRef}
           className="mindmap-node__label nodrag nopan"
         >
           {data.label || '無題'}

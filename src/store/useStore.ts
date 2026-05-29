@@ -297,9 +297,9 @@ export const useStore = create<MindMapState>((set, get) => ({
           break;
         case 'right': {
           const childNodes = state.edges
-          .filter((edge) => edge.source === selectedNode.id)
-          .map((edge) => nodesById.get(edge.target))
-          .filter((node): node is MindMapNode => Boolean(node));
+            .filter((edge) => edge.source === selectedNode.id)
+            .map((edge) => nodesById.get(edge.target))
+            .filter((node): node is MindMapNode => Boolean(node));
 
           nextSelectedNode = childNodes.sort(compareByYThenOrder(nodeOrder))[0];
           break;
@@ -307,15 +307,17 @@ export const useStore = create<MindMapState>((set, get) => ({
         case 'up':
         case 'down': {
           if (!parentId) {
-          break;
+            break;
           }
 
           const siblingNodes = state.edges
-          .filter((edge) => edge.source === parentId && edge.target !== selectedNode.id)
-          .map((edge) => nodesById.get(edge.target))
-          .filter((node): node is MindMapNode => Boolean(node))
-          .filter((node) => (direction === 'up' ? node.position.y < selectedNode.position.y : node.position.y > selectedNode.position.y))
-          .sort(compareByDistanceThenOrder(selectedNode.position.y, nodeOrder, direction));
+            .filter((edge) => edge.source === parentId && edge.target !== selectedNode.id)
+            .map((edge) => nodesById.get(edge.target))
+            .filter((node): node is MindMapNode => Boolean(node))
+            .filter((node) =>
+              direction === 'up' ? node.position.y < selectedNode.position.y : node.position.y > selectedNode.position.y,
+            )
+            .sort(compareByDistanceThenOrder(selectedNode.position.y, nodeOrder, direction));
 
           nextSelectedNode = siblingNodes[0];
           break;
