@@ -18,6 +18,8 @@ export type MindMapNodeData = {
 export type MindMapNode = Node<MindMapNodeData>;
 export type MindMapEdge = Edge;
 
+export const MINDMAP_NODE_TYPE = 'mindmap';
+
 type CreateNodeInput = {
   data: MindMapNodeData;
   position: XYPosition;
@@ -53,6 +55,7 @@ const createNodeId = () => {
 
 const createRootNode = (): MindMapNode => ({
   id: ROOT_NODE_ID,
+  type: MINDMAP_NODE_TYPE,
   position: { x: 0, y: 0 },
   data: { label: 'ルート（中心概念）' },
   className: 'mindmap-root-node',
@@ -104,6 +107,7 @@ export const useStore = create<MindMapState>((set) => ({
     set((state) => {
       const nextNode: MindMapNode = {
         id: nodeId,
+        type: MINDMAP_NODE_TYPE,
         position,
         data,
       };
