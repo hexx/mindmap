@@ -5,9 +5,16 @@ import {
   ReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
-import { useMemo } from 'react';
+import { useCallback, useMemo, type KeyboardEvent } from 'react';
 import MindMapNodeComponent from './nodes/MindMapNode';
-import { MINDMAP_NODE_TYPE, type MindMapEdge, type MindMapNode, useStore } from './store/useStore';
+import {
+  MINDMAP_NODE_TYPE,
+  ROOT_NODE_ID,
+  getSelectedNode,
+  type MindMapEdge,
+  type MindMapNode,
+  useStore,
+} from './store/useStore';
 
 export default function App() {
   const nodes = useStore((state) => state.nodes);
@@ -15,11 +22,44 @@ export default function App() {
   const onNodesChange = useStore((state) => state.onNodesChange);
   const onEdgesChange = useStore((state) => state.onEdgesChange);
   const onConnect = useStore((state) => state.onConnect);
+  const addChildNode = useStore((state) => state.addChildNode);
+  const addSiblingNode = useStore((state) => state.addSiblingNode);
+  const removeNode = useStore((state) => state.removeNode);
+  const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
   const nodeTypes = useMemo<NodeTypes>(
     () => ({
       [MINDMAP_NODE_TYPE]: MindMapNodeComponent,
     }),
     [],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (!selectedNode) {
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        addChildNode(selectedNode.id);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addSiblingNode(selectedNode.id);
+        return;
+      }
+
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+
+        if (selectedNode.id !== ROOT_NODE_ID) {
+          removeNode(selectedNode.id);
+        }
+      }
+    },
+    [addChildNode, addSiblingNode, removeNode, selectedNode],
   );
 
   return (
@@ -31,6 +71,7 @@ export default function App() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onKeyDown={handleKeyDown}
         fitView
         minZoom={0.25}
         className="mindmap-flow"

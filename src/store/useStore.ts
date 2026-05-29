@@ -19,6 +19,7 @@ export type MindMapNode = Node<MindMapNodeData>;
 export type MindMapEdge = Edge;
 
 export const MINDMAP_NODE_TYPE = 'mindmap';
+export const ROOT_NODE_ID = 'root';
 
 type CreateNodeInput = {
   data: MindMapNodeData;
@@ -37,11 +38,13 @@ type MindMapState = {
   onEdgesChange: (changes: EdgeChange<MindMapEdge>[]) => void;
   onConnect: (connection: Connection) => void;
   addNode: (input: CreateNodeInput) => string;
+  addChildNode: (parentId: string) => string | null;
+  addSiblingNode: (nodeId: string) => string | null;
   removeNode: (nodeId: string) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
 };
 
-const ROOT_NODE_ID = 'root';
+export const getSelectedNode = (nodes: MindMapNode[]) => nodes.find((node) => node.selected);
 
 const createNodeId = () => {
   const randomUUID = globalThis.crypto?.randomUUID;
@@ -58,6 +61,7 @@ const createRootNode = (): MindMapNode => ({
   type: MINDMAP_NODE_TYPE,
   position: { x: 0, y: 0 },
   data: { label: 'ルート（中心概念）' },
+  selected: true,
   className: 'mindmap-root-node',
 });
 
@@ -84,7 +88,7 @@ const collectDescendants = (nodeId: string, edges: MindMapEdge[]) => {
   return descendantIds;
 };
 
-export const useStore = create<MindMapState>((set) => ({
+export const useStore = create<MindMapState>((set, get) => ({
   ...createInitialGraph(),
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
@@ -105,11 +109,17 @@ export const useStore = create<MindMapState>((set) => ({
     const nodeId = id ?? createNodeId();
 
     set((state) => {
+      const nextNodes = state.nodes.map((node) => ({
+        ...node,
+        selected: false,
+      }));
+
       const nextNode: MindMapNode = {
         id: nodeId,
         type: MINDMAP_NODE_TYPE,
         position,
         data,
+        selected: true,
       };
 
       const nextEdges = parentId
@@ -124,22 +134,116 @@ export const useStore = create<MindMapState>((set) => ({
         : state.edges;
 
       return {
-        nodes: [...state.nodes, nextNode],
+        nodes: [...nextNodes, nextNode],
         edges: nextEdges,
       };
     });
 
     return nodeId;
   },
+  addChildNode: (parentId) => {
+    const { nodes, edges } = get();
+    const parentNode = nodes.find((node) => node.id === parentId);
+
+    if (!parentNode) {
+      return null;
+    }
+
+    const nodeId = createNodeId();
+    const nextNode: MindMapNode = {
+      id: nodeId,
+      type: MINDMAP_NODE_TYPE,
+      position: {
+        x: parentNode.position.x + 250,
+        y: parentNode.position.y,
+      },
+      data: { label: '' },
+      selected: true,
+    };
+
+    set({
+      nodes: [
+        ...nodes.map((node) => ({
+          ...node,
+          selected: false,
+        })),
+        nextNode,
+      ],
+      edges: [
+        ...edges,
+        {
+          id: `${parentId}-${nodeId}`,
+          source: parentId,
+          target: nodeId,
+        },
+      ],
+    });
+
+    return nodeId;
+  },
+  addSiblingNode: (nodeId) => {
+    const { nodes, edges } = get();
+    const currentNode = nodes.find((node) => node.id === nodeId);
+    const parentId = edges.find((edge) => edge.target === nodeId)?.source;
+
+    if (!currentNode || !parentId) {
+      return null;
+    }
+
+    const siblingId = createNodeId();
+    const nextNode: MindMapNode = {
+      id: siblingId,
+      type: MINDMAP_NODE_TYPE,
+      position: {
+        x: currentNode.position.x,
+        y: currentNode.position.y + 100,
+      },
+      data: { label: '' },
+      selected: true,
+    };
+
+    set({
+      nodes: [
+        ...nodes.map((node) => ({
+          ...node,
+          selected: false,
+        })),
+        nextNode,
+      ],
+      edges: [
+        ...edges,
+        {
+          id: `${parentId}-${siblingId}`,
+          source: parentId,
+          target: siblingId,
+        },
+      ],
+    });
+
+    return siblingId;
+  },
   removeNode: (nodeId) =>
     set((state) => {
+      if (nodeId === ROOT_NODE_ID) {
+        return state;
+      }
+
       const descendantIds = collectDescendants(nodeId, state.edges);
+      const parentId = state.edges.find((edge) => edge.target === nodeId)?.source;
+      const remainingNodes = state.nodes.filter((node) => !descendantIds.has(node.id));
+      const remainingEdges = state.edges.filter(
+        (edge) => !descendantIds.has(edge.source) && !descendantIds.has(edge.target),
+      );
+      const nextSelectedId = parentId && remainingNodes.some((node) => node.id === parentId)
+        ? parentId
+        : remainingNodes[0]?.id;
 
       return {
-        nodes: state.nodes.filter((node) => !descendantIds.has(node.id)),
-        edges: state.edges.filter(
-          (edge) => !descendantIds.has(edge.source) && !descendantIds.has(edge.target),
-        ),
+        nodes: remainingNodes.map((node) => ({
+          ...node,
+          selected: node.id === nextSelectedId,
+        })),
+        edges: remainingEdges,
       };
     }),
   updateNodeLabel: (nodeId, label) =>
