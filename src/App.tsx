@@ -3,6 +3,7 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  useReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
 import { useCallback, useMemo, type KeyboardEvent } from 'react';
@@ -27,8 +28,10 @@ export default function App() {
   const addChildNode = useStore((state) => state.addChildNode);
   const addSiblingNode = useStore((state) => state.addSiblingNode);
   const moveFocus = useStore((state) => state.moveFocus);
+  const updateNodeParent = useStore((state) => state.updateNodeParent);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
+  const { getIntersectingNodes } = useReactFlow<MindMapNode, MindMapEdge>();
   const nodeTypes = useMemo<NodeTypes>(
     () => ({
       [MINDMAP_NODE_TYPE]: MindMapNodeComponent,
@@ -123,6 +126,16 @@ export default function App() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStop={(_, node) => {
+          const intersectingNodes = getIntersectingNodes(node, true).filter((candidate) => candidate.id !== node.id);
+          const nextParentNode = intersectingNodes[0];
+
+          if (!nextParentNode) {
+            return;
+          }
+
+          updateNodeParent(node.id, nextParentNode.id);
+        }}
         onKeyDownCapture={handleKeyDownCapture}
         onKeyDown={handleKeyDown}
         deleteKeyCode={null}

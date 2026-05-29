@@ -45,6 +45,7 @@ type MindMapState = {
   removeNode: (nodeId: string) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
   moveFocus: (direction: FocusDirection) => void;
+  updateNodeParent: (nodeId: string, newParentId: string) => void;
 };
 
 export const getSelectedNode = (nodes: MindMapNode[]) => nodes.find((node) => node.selected);
@@ -88,6 +89,8 @@ const collectDescendants = (nodeId: string, edges: MindMapEdge[]) => {
 
   return descendantIds;
 };
+
+const getParentId = (nodeId: string, edges: MindMapEdge[]) => edges.find((edge) => edge.target === nodeId)?.source;
 
 const getNodeOrder = (nodes: MindMapNode[]) => new Map(nodes.map((node, index) => [node.id, index]));
 
@@ -201,7 +204,7 @@ export const useStore = create<MindMapState>((set, get) => ({
   addSiblingNode: (nodeId) => {
     const { nodes, edges } = get();
     const currentNode = nodes.find((node) => node.id === nodeId);
-    const parentId = edges.find((edge) => edge.target === nodeId)?.source;
+    const parentId = getParentId(nodeId, edges);
 
     if (!currentNode || !parentId) {
       return null;
@@ -246,7 +249,7 @@ export const useStore = create<MindMapState>((set, get) => ({
       }
 
       const descendantIds = collectDescendants(nodeId, state.edges);
-      const parentId = state.edges.find((edge) => edge.target === nodeId)?.source;
+      const parentId = getParentId(nodeId, state.edges);
       const remainingNodes = state.nodes.filter((node) => !descendantIds.has(node.id));
       const remainingEdges = state.edges.filter(
         (edge) => !descendantIds.has(edge.source) && !descendantIds.has(edge.target),
@@ -334,6 +337,41 @@ export const useStore = create<MindMapState>((set, get) => ({
           selected: node.id === nextSelectedNode.id,
         })),
         edges: state.edges,
+      };
+    }),
+  updateNodeParent: (nodeId, newParentId) =>
+    set((state) => {
+      if (nodeId === ROOT_NODE_ID || nodeId === newParentId) {
+        return state;
+      }
+
+      const targetNode = state.nodes.find((node) => node.id === nodeId);
+      const parentNode = state.nodes.find((node) => node.id === newParentId);
+
+      if (!targetNode || !parentNode) {
+        return state;
+      }
+
+      const currentParentId = getParentId(nodeId, state.edges);
+
+      if (currentParentId === newParentId) {
+        return state;
+      }
+
+      if (collectDescendants(nodeId, state.edges).has(newParentId)) {
+        return state;
+      }
+
+      return {
+        nodes: state.nodes,
+        edges: [
+          ...state.edges.filter((edge) => edge.target !== nodeId),
+          {
+            id: `${newParentId}-${nodeId}`,
+            source: newParentId,
+            target: nodeId,
+          },
+        ],
       };
     }),
 }));
