@@ -29,6 +29,7 @@ export default function App() {
   const addSiblingNode = useStore((state) => state.addSiblingNode);
   const moveFocus = useStore((state) => state.moveFocus);
   const updateNodeParent = useStore((state) => state.updateNodeParent);
+  const applyAutoLayout = useStore((state) => state.applyAutoLayout);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
   const { getIntersectingNodes } = useReactFlow<MindMapNode, MindMapEdge>();
@@ -147,9 +148,14 @@ export default function App() {
         <Controls />
         <MiniMap zoomable pannable />
       </ReactFlow>
-      <button type="button" className="org-export-button" onClick={handleExportOrgMode}>
-        org-modeでエクスポート
-      </button>
+      <div className="canvas-actions">
+        <button type="button" className="canvas-action-button" onClick={applyAutoLayout}>
+          整列
+        </button>
+        <button type="button" className="canvas-action-button" onClick={handleExportOrgMode}>
+          org-modeでエクスポート
+        </button>
+      </div>
       <MobileToolbar />
     </div>
   );
