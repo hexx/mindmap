@@ -1,18 +1,14 @@
+import { desc, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
 import type { CloudMindmapRecord, CloudMindmapSummary } from './src/utils/cloudMindmaps';
+import { mindmapsTable } from './src/db/schema';
 
 type Env = {
   DB?: D1Database;
   ASSETS?: Fetcher;
 };
 
-type MindmapRow = {
-  id: string;
-  title: string;
-  nodes_json: string;
-  edges_json: string;
-  created_at: string;
-  updated_at: string;
-};
+type Database = ReturnType<typeof drizzle>;
 
 const toJsonResponse = (data: unknown, init: ResponseInit = {}) =>
   (() => {
@@ -51,11 +47,21 @@ const toMindmapTitle = (value: unknown) => {
   return '無題のマインドマップ';
 };
 
-const loadMindmap = async (db: D1Database, id: string) => {
-  const row = await db
-    .prepare('SELECT id, title, nodes_json, edges_json, created_at, updated_at FROM mindmaps WHERE id = ?')
-    .bind(id)
-    .first<MindmapRow>();
+const loadMindmap = async (db: Database, id: string) => {
+  const rows = await db
+    .select({
+      id: mindmapsTable.id,
+      title: mindmapsTable.title,
+      nodesJson: mindmapsTable.nodesJson,
+      edgesJson: mindmapsTable.edgesJson,
+      created_at: mindmapsTable.createdAt,
+      updated_at: mindmapsTable.updatedAt,
+    })
+    .from(mindmapsTable)
+    .where(eq(mindmapsTable.id, id))
+    .limit(1);
+
+  const row = rows[0];
 
   if (!row) {
     return null;
@@ -66,12 +72,12 @@ const loadMindmap = async (db: D1Database, id: string) => {
     title: row.title,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    nodes: JSON.parse(row.nodes_json) as CloudMindmapRecord['nodes'],
-    edges: JSON.parse(row.edges_json) as CloudMindmapRecord['edges'],
+    nodes: JSON.parse(row.nodesJson) as CloudMindmapRecord['nodes'],
+    edges: JSON.parse(row.edgesJson) as CloudMindmapRecord['edges'],
   };
 };
 
-const upsertMindmap = async (db: D1Database, request: Request, pathId?: string) => {
+const upsertMindmap = async (db: Database, request: Request, pathId?: string) => {
   const body = await parseJsonBody<Partial<CloudMindmapRecord> & { id?: string }>(request);
   const id = pathId ?? body.id ?? crypto.randomUUID();
   const title = toMindmapTitle(body.title);
@@ -80,17 +86,35 @@ const upsertMindmap = async (db: D1Database, request: Request, pathId?: string) 
     throw new Error('nodes and edges must be arrays');
   }
 
-  const existing = await db.prepare('SELECT created_at FROM mindmaps WHERE id = ?').bind(id).first<{ created_at: string }>();
-  const createdAt = existing?.created_at ?? new Date().toISOString();
+  const existing = await db
+    .select({
+      createdAt: mindmapsTable.createdAt,
+    })
+    .from(mindmapsTable)
+    .where(eq(mindmapsTable.id, id))
+    .limit(1);
+  const createdAt = existing[0]?.createdAt ?? new Date().toISOString();
   const updatedAt = new Date().toISOString();
 
   await db
-    .prepare(
-      'INSERT INTO mindmaps (id, title, nodes_json, edges_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) ' +
-        'ON CONFLICT(id) DO UPDATE SET title = excluded.title, nodes_json = excluded.nodes_json, edges_json = excluded.edges_json, updated_at = excluded.updated_at',
-    )
-    .bind(id, title, JSON.stringify(body.nodes), JSON.stringify(body.edges), createdAt, updatedAt)
-    .run();
+    .insert(mindmapsTable)
+    .values({
+      id,
+      title,
+      nodesJson: JSON.stringify(body.nodes),
+      edgesJson: JSON.stringify(body.edges),
+      createdAt,
+      updatedAt,
+    })
+    .onConflictDoUpdate({
+      target: mindmapsTable.id,
+      set: {
+        title,
+        nodesJson: JSON.stringify(body.nodes),
+        edgesJson: JSON.stringify(body.edges),
+        updatedAt,
+      },
+    });
 
   return {
     id,
@@ -99,22 +123,31 @@ const upsertMindmap = async (db: D1Database, request: Request, pathId?: string) 
   } satisfies CloudMindmapSummary;
 };
 
-const listMindmaps = async (db: D1Database) => {
-  const result = await db
-    .prepare('SELECT id, title, created_at FROM mindmaps ORDER BY created_at DESC, id DESC')
-    .all<CloudMindmapSummary>();
-
-  return result.results ?? [];
+const listMindmaps = async (db: Database) => {
+  return db
+    .select({
+      id: mindmapsTable.id,
+      title: mindmapsTable.title,
+      created_at: mindmapsTable.createdAt,
+    })
+    .from(mindmapsTable)
+    .orderBy(desc(mindmapsTable.createdAt), desc(mindmapsTable.id));
 };
 
-const deleteMindmap = async (db: D1Database, id: string) => {
-  const existing = await db.prepare('SELECT id FROM mindmaps WHERE id = ?').bind(id).first<{ id: string }>();
+const deleteMindmap = async (db: Database, id: string) => {
+  const existing = await db
+    .select({
+      id: mindmapsTable.id,
+    })
+    .from(mindmapsTable)
+    .where(eq(mindmapsTable.id, id))
+    .limit(1);
 
-  if (!existing) {
+  if (!existing[0]) {
     return false;
   }
 
-  await db.prepare('DELETE FROM mindmaps WHERE id = ?').bind(id).run();
+  await db.delete(mindmapsTable).where(eq(mindmapsTable.id, id));
   return true;
 };
 
@@ -134,13 +167,15 @@ export default {
       return toErrorResponse('D1 binding is not configured', 500);
     }
 
+    const db = drizzle(env.DB);
+
     try {
       if (request.method === 'GET' && url.pathname === '/api/mindmaps') {
-        return toJsonResponse(await listMindmaps(env.DB));
+        return toJsonResponse(await listMindmaps(db));
       }
 
       if (request.method === 'POST' && url.pathname === '/api/mindmap') {
-        return toJsonResponse(await upsertMindmap(env.DB, request), { status: 201 });
+        return toJsonResponse(await upsertMindmap(db, request), { status: 201 });
       }
 
       const mindmapMatch = url.pathname.match(/^\/api\/mindmap\/([^/]+)$/);
@@ -152,7 +187,7 @@ export default {
       const mindmapId = decodeURIComponent(mindmapMatch[1]);
 
       if (request.method === 'GET') {
-        const record = await loadMindmap(env.DB, mindmapId);
+        const record = await loadMindmap(db, mindmapId);
 
         if (!record) {
           return toErrorResponse('Mindmap not found', 404);
@@ -162,11 +197,11 @@ export default {
       }
 
       if (request.method === 'PUT' || request.method === 'PATCH') {
-        return toJsonResponse(await upsertMindmap(env.DB, request, mindmapId));
+        return toJsonResponse(await upsertMindmap(db, request, mindmapId));
       }
 
       if (request.method === 'DELETE') {
-        const deleted = await deleteMindmap(env.DB, mindmapId);
+        const deleted = await deleteMindmap(db, mindmapId);
 
         if (!deleted) {
           return toErrorResponse('Mindmap not found', 404);
