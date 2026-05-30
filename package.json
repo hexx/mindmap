@@ -12,6 +12,7 @@
   "dependencies": {
     "@xyflow/react": "^12.10.2",
     "d3-hierarchy": "^3.1.2",
+    "drizzle-orm": "^0.45.2",
     "org-toolkit": "github:hexx/org-toolkit",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

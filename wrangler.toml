@@ -1,5 +1,6 @@
 name = "mindmap"
 compatibility_date = "2026-05-29"
+main = "worker.ts"
 assets = { directory = "dist" }
 
 # [[d1_databases]]

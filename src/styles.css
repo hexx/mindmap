@@ -35,7 +35,10 @@ body {
   bottom: 20px;
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
+  max-width: calc(100% - 40px);
 }
 
 .canvas-action-button {
@@ -169,4 +172,172 @@ body {
   height: 10px;
   border: 2px solid #2563eb;
   background: #fff;
+}
+
+.cloud-mindmaps-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.cloud-mindmaps-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(6px);
+}
+
+.cloud-mindmaps-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 100%);
+  max-height: min(80vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
+}
+
+.cloud-mindmaps-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cloud-mindmaps-modal__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.cloud-mindmaps-modal__subtitle {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 0.92rem;
+}
+
+.cloud-mindmaps-modal__close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cloud-mindmaps-modal__body {
+  overflow: auto;
+  padding: 20px 24px 24px;
+}
+
+.cloud-mindmaps-modal__status,
+.cloud-mindmaps-modal__empty,
+.cloud-mindmaps-modal__error {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.cloud-mindmaps-modal__error {
+  margin-bottom: 16px;
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  color: #b91c1c;
+}
+
+.cloud-mindmaps-modal__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cloud-mindmaps-modal__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.cloud-mindmaps-modal__info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cloud-mindmaps-modal__item-title {
+  font-weight: 700;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloud-mindmaps-modal__item-meta {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.cloud-mindmaps-modal__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cloud-mindmaps-modal__button {
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cloud-mindmaps-modal__button--primary {
+  border-color: rgba(37, 99, 235, 0.18);
+  background: #2563eb;
+  color: #fff;
+}
+
+.cloud-mindmaps-modal__button--danger {
+  border-color: rgba(185, 28, 28, 0.14);
+  background: #fff;
+  color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .cloud-mindmaps-modal {
+    padding: 12px;
+  }
+
+  .cloud-mindmaps-modal__panel {
+    max-height: calc(100vh - 24px);
+  }
+
+  .cloud-mindmaps-modal__item {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-mindmaps-modal__actions {
+    justify-content: flex-end;
+  }
 }
