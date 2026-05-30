@@ -49,6 +49,7 @@ type MindMapState = {
   addNode: (input: CreateNodeInput) => string;
   addChildNode: (parentId: string) => string | null;
   addSiblingNode: (nodeId: string) => string | null;
+  importGraph: (nodes: MindMapNode[], edges: MindMapEdge[]) => void;
   removeNode: (nodeId: string) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
   moveFocus: (direction: FocusDirection) => void;
@@ -321,6 +322,19 @@ export const useStore = create<MindMapState>()(
         get().applyAutoLayout();
 
         return siblingId;
+      },
+      importGraph: (nodes, edges) => {
+        const nextNodes = nodes.map((node) => ({
+          ...node,
+          selected: node.id === ROOT_NODE_ID,
+        }));
+
+        set({
+          nodes: nextNodes,
+          edges,
+        });
+
+        get().applyAutoLayout();
       },
       removeNode: (nodeId) =>
         set((state) => {
