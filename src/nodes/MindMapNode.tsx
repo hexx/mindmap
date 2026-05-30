@@ -5,8 +5,14 @@ import {
 } from '@xyflow/react';
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { type MindMapNode as MindMapFlowNode, useStore } from '../store/useStore';
+import {
+  LEFT_SOURCE_HANDLE_ID,
+  LEFT_TARGET_HANDLE_ID,
+  RIGHT_SOURCE_HANDLE_ID,
+  RIGHT_TARGET_HANDLE_ID,
+} from '../utils/edgeHandles';
 
-export default function MindMapNode({ id, data, selected, positionAbsoluteX }: NodeProps<MindMapFlowNode>) {
+export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlowNode>) {
   const updateNodeLabel = useStore((state) => state.updateNodeLabel);
   const [isEditing, setIsEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(data.label);
@@ -92,10 +98,6 @@ export default function MindMapNode({ id, data, selected, positionAbsoluteX }: N
     setIsEditing(true);
   }, []);
 
-  const isLeftSide = positionAbsoluteX < 0;
-  const targetPosition = isLeftSide ? Position.Right : Position.Left;
-  const sourcePosition = isLeftSide ? Position.Left : Position.Right;
-
   return (
     <div
       className={[
@@ -106,7 +108,8 @@ export default function MindMapNode({ id, data, selected, positionAbsoluteX }: N
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
     >
-      <Handle type="target" position={targetPosition} className="mindmap-node__handle" />
+      <Handle type="target" position={Position.Left} id={LEFT_TARGET_HANDLE_ID} className="mindmap-node__handle" />
+      <Handle type="source" position={Position.Left} id={LEFT_SOURCE_HANDLE_ID} className="mindmap-node__handle" />
       {isEditing ? (
         <input
           ref={inputRef}
@@ -136,11 +139,8 @@ export default function MindMapNode({ id, data, selected, positionAbsoluteX }: N
           {data.label || '無題'}
         </button>
       )}
-      <Handle
-        type="source"
-        position={sourcePosition}
-        className="mindmap-node__handle"
-      />
+      <Handle type="target" position={Position.Right} id={RIGHT_TARGET_HANDLE_ID} className="mindmap-node__handle" />
+      <Handle type="source" position={Position.Right} id={RIGHT_SOURCE_HANDLE_ID} className="mindmap-node__handle" />
     </div>
   );
 }

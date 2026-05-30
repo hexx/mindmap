@@ -12,6 +12,7 @@ import {
 import { stratify, tree } from 'd3-hierarchy';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { createDirectionalEdge, rebuildDirectionalEdges } from '../utils/edgeHandles';
 
 export type MindMapNodeData = {
   label: string;
@@ -185,19 +186,42 @@ export const useStore = create<MindMapState>()(
       setEdges: (edges) => set({ edges }),
       resetGraph: () => set(createInitialGraph()),
       onNodesChange: (changes) =>
-        set((state) => ({
-          nodes: applyNodeChanges(changes, state.nodes),
-        })),
+        set((state) => {
+          const nextNodes = applyNodeChanges(changes, state.nodes);
+
+          return {
+            nodes: nextNodes,
+            edges: rebuildDirectionalEdges(nextNodes, state.edges),
+          };
+        }),
       onEdgesChange: (changes) =>
         set((state) => ({
           edges: applyEdgeChanges(changes, state.edges),
         })),
       onConnect: (connection) =>
-        set((state) => ({
-          edges: addEdge(connection, state.edges),
-        })),
+        set((state) => {
+          const sourceNode = state.nodes.find((node) => node.id === connection.source);
+          const targetNode = state.nodes.find((node) => node.id === connection.target);
+
+          if (!sourceNode || !targetNode) {
+            return {
+              edges: addEdge(connection, state.edges),
+            };
+          }
+
+          return {
+            edges: addEdge(
+              {
+                ...connection,
+                ...createDirectionalEdge(sourceNode, targetNode),
+              },
+              state.edges,
+            ),
+          };
+        }),
       addNode: ({ data, position, parentId, id }) => {
         const nodeId = id ?? createNodeId();
+        const parentNode = parentId ? get().nodes.find((node) => node.id === parentId) : undefined;
 
         set((state) => {
           const nextNodes = state.nodes.map((node) => ({
@@ -213,14 +237,10 @@ export const useStore = create<MindMapState>()(
             selected: true,
           };
 
-          const nextEdges = parentId
+          const nextEdges = parentId && parentNode
             ? [
                 ...state.edges,
-                {
-                  id: `${parentId}-${nodeId}`,
-                  source: parentId,
-                  target: nodeId,
-                },
+                createDirectionalEdge(parentNode, nextNode),
               ]
             : state.edges;
 
@@ -265,11 +285,7 @@ export const useStore = create<MindMapState>()(
           ],
           edges: [
             ...edges,
-            {
-              id: `${parentId}-${nodeId}`,
-              source: parentId,
-              target: nodeId,
-            },
+            createDirectionalEdge(parentNode, nextNode),
           ],
         });
 
@@ -311,11 +327,7 @@ export const useStore = create<MindMapState>()(
           ],
           edges: [
             ...edges,
-            {
-              id: `${parentId}-${siblingId}`,
-              source: parentId,
-              target: siblingId,
-            },
+            createDirectionalEdge(currentNode, nextNode),
           ],
         });
 
@@ -328,10 +340,11 @@ export const useStore = create<MindMapState>()(
           ...node,
           selected: node.id === ROOT_NODE_ID,
         }));
+        const nextEdges = rebuildDirectionalEdges(nextNodes, edges);
 
         set({
           nodes: nextNodes,
-          edges,
+          edges: nextEdges,
         });
 
         get().applyAutoLayout();
@@ -460,11 +473,7 @@ export const useStore = create<MindMapState>()(
             nodes: state.nodes,
             edges: [
               ...state.edges.filter((edge) => edge.target !== nodeId),
-              {
-                id: `${newParentId}-${nodeId}`,
-                source: newParentId,
-                target: nodeId,
-              },
+              createDirectionalEdge(parentNode, targetNode),
             ],
           };
         });
@@ -487,12 +496,14 @@ export const useStore = create<MindMapState>()(
             positions.set(nodeId, position);
           });
 
+          const nextNodes = state.nodes.map((node) => ({
+            ...node,
+            position: positions.get(node.id) ?? node.position,
+          }));
+
           return {
-            nodes: state.nodes.map((node) => ({
-              ...node,
-              position: positions.get(node.id) ?? node.position,
-            })),
-            edges: state.edges,
+            nodes: nextNodes,
+            edges: rebuildDirectionalEdges(nextNodes, state.edges),
           };
         }),
     }),
