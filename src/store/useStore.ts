@@ -49,6 +49,7 @@ type MindMapState = {
   addNode: (input: CreateNodeInput) => string;
   addChildNode: (parentId: string) => string | null;
   addSiblingNode: (nodeId: string) => string | null;
+  importGraph: (nodes: MindMapNode[], edges: MindMapEdge[]) => void;
   removeNode: (nodeId: string) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
   moveFocus: (direction: FocusDirection) => void;
@@ -116,11 +117,65 @@ const compareByDistanceThenOrder = (
   return leftDistance - rightDistance || (nodeOrder.get(left.id) ?? 0) - (nodeOrder.get(right.id) ?? 0);
 };
 
-const getLayoutEntries = (nodes: MindMapNode[], edges: MindMapEdge[]) =>
-  nodes.map((node) => ({
-    id: node.id,
-    parentId: node.id === ROOT_NODE_ID ? null : getParentId(node.id, edges) ?? ROOT_NODE_ID,
-  }));
+const getRootChildIds = (nodes: MindMapNode[], edges: MindMapEdge[]) => {
+  const nodeOrder = getNodeOrder(nodes);
+
+  return nodes
+    .filter((node) => getParentId(node.id, edges) === ROOT_NODE_ID)
+    .sort((left, right) => (nodeOrder.get(left.id) ?? 0) - (nodeOrder.get(right.id) ?? 0))
+    .map((node) => node.id);
+};
+
+const splitRootChildIds = (rootChildIds: string[]) =>
+  rootChildIds.reduce(
+    (groups, nodeId, index) => {
+      const targetGroup = index % 2 === 0 ? groups.right : groups.left;
+      targetGroup.push(nodeId);
+      return groups;
+    },
+    {
+      right: [] as string[],
+      left: [] as string[],
+    },
+  );
+
+const buildRadialPositions = (nodes: MindMapNode[], rootChildIds: string[], edges: MindMapEdge[], invertX: boolean) => {
+  if (rootChildIds.length === 0) {
+    return new Map<string, XYPosition>([[ROOT_NODE_ID, { x: 0, y: 0 }]]);
+  }
+
+  const nodeOrder = getNodeOrder(nodes);
+  const nodeIds = new Set<string>([ROOT_NODE_ID]);
+
+  rootChildIds.forEach((rootChildId) => {
+    collectDescendants(rootChildId, edges).forEach((nodeId) => nodeIds.add(nodeId));
+  });
+
+  const hierarchy = stratify<LayoutEntry>()(
+    Array.from(nodeIds)
+      .sort((left, right) => (nodeOrder.get(left) ?? 0) - (nodeOrder.get(right) ?? 0))
+      .map((id) => ({
+        id,
+        parentId: id === ROOT_NODE_ID ? null : getParentId(id, edges) ?? ROOT_NODE_ID,
+      })),
+  );
+  const laidOutRoot = tree<LayoutEntry>().nodeSize([100, 300])(hierarchy);
+
+  const positions = new Map<string, XYPosition>();
+
+  for (const node of laidOutRoot.descendants()) {
+    if (!node.id) {
+      continue;
+    }
+
+    positions.set(node.id, {
+      x: node.id === ROOT_NODE_ID ? 0 : invertX ? -node.y : node.y,
+      y: node.x,
+    });
+  }
+
+  return positions;
+};
 
 export const useStore = create<MindMapState>()(
   persist(
@@ -186,11 +241,14 @@ export const useStore = create<MindMapState>()(
         }
 
         const nodeId = createNodeId();
+        const rootChildCount = nodes.filter((node) => getParentId(node.id, edges) === ROOT_NODE_ID).length;
+        const nextX =
+          parentId === ROOT_NODE_ID ? (rootChildCount % 2 === 0 ? 250 : -250) : parentNode.position.x + 250;
         const nextNode: MindMapNode = {
           id: nodeId,
           type: MINDMAP_NODE_TYPE,
           position: {
-            x: parentNode.position.x + 250,
+            x: nextX,
             y: parentNode.position.y,
           },
           data: { label: '' },
@@ -229,11 +287,14 @@ export const useStore = create<MindMapState>()(
         }
 
         const siblingId = createNodeId();
+        const rootChildCount = nodes.filter((node) => getParentId(node.id, edges) === ROOT_NODE_ID).length;
+        const nextX =
+          parentId === ROOT_NODE_ID ? (rootChildCount % 2 === 0 ? 250 : -250) : currentNode.position.x;
         const nextNode: MindMapNode = {
           id: siblingId,
           type: MINDMAP_NODE_TYPE,
           position: {
-            x: currentNode.position.x,
+            x: nextX,
             y: currentNode.position.y + 100,
           },
           data: { label: '' },
@@ -261,6 +322,19 @@ export const useStore = create<MindMapState>()(
         get().applyAutoLayout();
 
         return siblingId;
+      },
+      importGraph: (nodes, edges) => {
+        const nextNodes = nodes.map((node) => ({
+          ...node,
+          selected: node.id === ROOT_NODE_ID,
+        }));
+
+        set({
+          nodes: nextNodes,
+          edges,
+        });
+
+        get().applyAutoLayout();
       },
       removeNode: (nodeId) =>
         set((state) => {
@@ -399,17 +473,19 @@ export const useStore = create<MindMapState>()(
       },
       applyAutoLayout: () =>
         set((state) => {
-          const hierarchy = stratify<LayoutEntry>()(getLayoutEntries(state.nodes, state.edges));
-          const laidOutRoot = tree<LayoutEntry>().nodeSize([100, 300])(hierarchy);
-          const positions = new Map(
-            laidOutRoot.descendants().map((node) => [
-              node.id,
-              {
-                x: node.y,
-                y: node.x,
-              },
-            ]),
-          );
+          const rootChildIds = getRootChildIds(state.nodes, state.edges);
+          const { right, left } = splitRootChildIds(rootChildIds);
+          const rightPositions = buildRadialPositions(state.nodes, right, state.edges, false);
+          const leftPositions = buildRadialPositions(state.nodes, left, state.edges, true);
+          const positions = new Map<string, XYPosition>([[ROOT_NODE_ID, { x: 0, y: 0 }]]);
+
+          rightPositions.forEach((position, nodeId) => {
+            positions.set(nodeId, position);
+          });
+
+          leftPositions.forEach((position, nodeId) => {
+            positions.set(nodeId, position);
+          });
 
           return {
             nodes: state.nodes.map((node) => ({

@@ -6,9 +6,10 @@ import {
   useReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
-import { useCallback, useMemo, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import MobileToolbar from './components/MobileToolbar';
 import MindMapNodeComponent from './nodes/MindMapNode';
+import { importOrgMode } from './utils/importOrgMode';
 import { exportOrgMode } from './utils/exportOrgMode';
 import {
   MINDMAP_NODE_TYPE,
@@ -27,11 +28,13 @@ export default function App() {
   const onConnect = useStore((state) => state.onConnect);
   const addChildNode = useStore((state) => state.addChildNode);
   const addSiblingNode = useStore((state) => state.addSiblingNode);
+  const importGraph = useStore((state) => state.importGraph);
   const moveFocus = useStore((state) => state.moveFocus);
   const updateNodeParent = useStore((state) => state.updateNodeParent);
   const applyAutoLayout = useStore((state) => state.applyAutoLayout);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const { getIntersectingNodes, fitView } = useReactFlow<MindMapNode, MindMapEdge>();
   const nodeTypes = useMemo<NodeTypes>(
     () => ({
@@ -143,6 +146,35 @@ export default function App() {
     window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
   }, [edges, nodes]);
 
+  const handleImportClick = useCallback(() => {
+    importInputRef.current?.click();
+  }, []);
+
+  const handleImportFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.currentTarget.files?.[0];
+      event.currentTarget.value = '';
+
+      if (!file) {
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.addEventListener('load', () => {
+        if (typeof reader.result !== 'string') {
+          return;
+        }
+
+        const { nodes: importedNodes, edges: importedEdges } = importOrgMode(reader.result);
+        importGraph(importedNodes, importedEdges);
+      });
+
+      reader.readAsText(file);
+    },
+    [importGraph],
+  );
+
   return (
     <div className="app-shell">
       <ReactFlow<MindMapNode, MindMapEdge>
@@ -177,10 +209,14 @@ export default function App() {
         <button type="button" className="canvas-action-button" onClick={applyAutoLayout}>
           整列
         </button>
+        <button type="button" className="canvas-action-button" onClick={handleImportClick}>
+          インポート
+        </button>
         <button type="button" className="canvas-action-button" onClick={handleExportOrgMode}>
           org-modeでエクスポート
         </button>
       </div>
+      <input ref={importInputRef} type="file" accept=".org" onChange={handleImportFileChange} style={{ display: 'none' }} />
       <MobileToolbar />
     </div>
   );
