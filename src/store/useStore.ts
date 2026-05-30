@@ -215,6 +215,8 @@ export const useStore = create<MindMapState>()(
           ],
         });
 
+        get().applyAutoLayout();
+
         return nodeId;
       },
       addSiblingNode: (nodeId) => {
@@ -255,6 +257,8 @@ export const useStore = create<MindMapState>()(
             },
           ],
         });
+
+        get().applyAutoLayout();
 
         return siblingId;
       },
@@ -355,7 +359,7 @@ export const useStore = create<MindMapState>()(
             edges: state.edges,
           };
         }),
-      updateNodeParent: (nodeId, newParentId) =>
+      updateNodeParent: (nodeId, newParentId) => {
         set((state) => {
           if (nodeId === ROOT_NODE_ID || nodeId === newParentId) {
             return state;
@@ -389,7 +393,10 @@ export const useStore = create<MindMapState>()(
               },
             ],
           };
-        }),
+        });
+
+        get().applyAutoLayout();
+      },
       applyAutoLayout: () =>
         set((state) => {
           const hierarchy = stratify<LayoutEntry>()(getLayoutEntries(state.nodes, state.edges));
