@@ -6,8 +6,9 @@ import {
   useReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
-import { useCallback, useMemo, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import MobileToolbar from './components/MobileToolbar';
+import SavedMindmapsModal from './components/SavedMindmapsModal';
 import MindMapNodeComponent from './nodes/MindMapNode';
 import { importOrgMode } from './utils/importOrgMode';
 import { exportOrgMode } from './utils/exportOrgMode';
@@ -29,12 +30,14 @@ export default function App() {
   const addChildNode = useStore((state) => state.addChildNode);
   const addSiblingNode = useStore((state) => state.addSiblingNode);
   const importGraph = useStore((state) => state.importGraph);
+  const saveToCloud = useStore((state) => state.saveToCloud);
   const moveFocus = useStore((state) => state.moveFocus);
   const updateNodeParent = useStore((state) => state.updateNodeParent);
   const applyAutoLayout = useStore((state) => state.applyAutoLayout);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { getIntersectingNodes, fitView } = useReactFlow<MindMapNode, MindMapEdge>();
   const nodeTypes = useMemo<NodeTypes>(
     () => ({
@@ -150,6 +153,18 @@ export default function App() {
     importInputRef.current?.click();
   }, []);
 
+  const handleSaveToCloud = useCallback(async () => {
+    try {
+      await saveToCloud();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'クラウドへの保存に失敗しました');
+    }
+  }, [saveToCloud]);
+
+  const handleOpenCloudMindmaps = useCallback(() => {
+    setIsModalOpen(true);
+  }, []);
+
   const handleImportFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.currentTarget.files?.[0];
@@ -209,6 +224,12 @@ export default function App() {
         <button type="button" className="canvas-action-button" onClick={applyAutoLayout}>
           整列
         </button>
+        <button type="button" className="canvas-action-button" onClick={handleSaveToCloud}>
+          クラウドに保存
+        </button>
+        <button type="button" className="canvas-action-button" onClick={handleOpenCloudMindmaps}>
+          クラウドから読込
+        </button>
         <button type="button" className="canvas-action-button" onClick={handleImportClick}>
           インポート
         </button>
@@ -218,6 +239,7 @@ export default function App() {
       </div>
       <input ref={importInputRef} type="file" accept=".org" onChange={handleImportFileChange} style={{ display: 'none' }} />
       <MobileToolbar />
+      <SavedMindmapsModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }
