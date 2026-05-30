@@ -127,8 +127,27 @@ const getRootChildIds = (nodes: MindMapNode[], edges: MindMapEdge[]) => {
     .map((node) => node.id);
 };
 
-const splitRootChildIds = (rootChildIds: string[]) =>
-  rootChildIds.reduce(
+const splitRootChildIds = (nodes: MindMapNode[], rootChildIds: string[]) => {
+  const rootChildNodes = rootChildIds
+    .map((nodeId) => nodes.find((node) => node.id === nodeId))
+    .filter((node): node is MindMapNode => Boolean(node));
+  const hasManualSideSelection = rootChildNodes.some((node) => Math.abs(node.position.x) > 1);
+
+  if (hasManualSideSelection) {
+    return rootChildNodes.reduce(
+      (groups, node) => {
+        const targetGroup = node.position.x < 0 ? groups.left : groups.right;
+        targetGroup.push(node.id);
+        return groups;
+      },
+      {
+        right: [] as string[],
+        left: [] as string[],
+      },
+    );
+  }
+
+  return rootChildIds.reduce(
     (groups, nodeId, index) => {
       const targetGroup = index % 2 === 0 ? groups.right : groups.left;
       targetGroup.push(nodeId);
@@ -139,6 +158,9 @@ const splitRootChildIds = (rootChildIds: string[]) =>
       left: [] as string[],
     },
   );
+};
+
+const getChildOffset = (parentNode: MindMapNode) => (parentNode.position.x < 0 ? -250 : 250);
 
 const buildRadialPositions = (nodes: MindMapNode[], rootChildIds: string[], edges: MindMapEdge[], invertX: boolean) => {
   if (rootChildIds.length === 0) {
@@ -261,9 +283,7 @@ export const useStore = create<MindMapState>()(
         }
 
         const nodeId = createNodeId();
-        const rootChildCount = nodes.filter((node) => getParentId(node.id, edges) === ROOT_NODE_ID).length;
-        const nextX =
-          parentId === ROOT_NODE_ID ? (rootChildCount % 2 === 0 ? 250 : -250) : parentNode.position.x + 250;
+        const nextX = parentId === ROOT_NODE_ID ? 250 : parentNode.position.x + getChildOffset(parentNode);
         const nextNode: MindMapNode = {
           id: nodeId,
           type: MINDMAP_NODE_TYPE,
@@ -303,9 +323,7 @@ export const useStore = create<MindMapState>()(
         }
 
         const siblingId = createNodeId();
-        const rootChildCount = nodes.filter((node) => getParentId(node.id, edges) === ROOT_NODE_ID).length;
-        const nextX =
-          parentId === ROOT_NODE_ID ? (rootChildCount % 2 === 0 ? 250 : -250) : currentNode.position.x;
+        const nextX = parentId === ROOT_NODE_ID ? (currentNode.position.x < 0 ? -250 : 250) : currentNode.position.x;
         const nextNode: MindMapNode = {
           id: siblingId,
           type: MINDMAP_NODE_TYPE,
@@ -483,7 +501,7 @@ export const useStore = create<MindMapState>()(
       applyAutoLayout: () =>
         set((state) => {
           const rootChildIds = getRootChildIds(state.nodes, state.edges);
-          const { right, left } = splitRootChildIds(rootChildIds);
+          const { right, left } = splitRootChildIds(state.nodes, rootChildIds);
           const rightPositions = buildRadialPositions(state.nodes, right, state.edges, false);
           const leftPositions = buildRadialPositions(state.nodes, left, state.edges, true);
           const positions = new Map<string, XYPosition>([[ROOT_NODE_ID, { x: 0, y: 0 }]]);
