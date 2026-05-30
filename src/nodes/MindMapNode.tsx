@@ -37,6 +37,12 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
   }, [isEditing]);
 
   useEffect(() => {
+    if (selected && !isEditing && data.label !== '') {
+      buttonRef.current?.focus();
+    }
+  }, []);
+
+  useEffect(() => {
     if (didInitializeRef.current) {
       return;
     }

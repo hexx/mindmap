@@ -1,5 +1,6 @@
 import { useCallback, useMemo, type PointerEvent } from 'react';
-import { getSelectedNode, ROOT_NODE_ID, useStore } from '../store/useStore';
+import { useReactFlow } from '@xyflow/react';
+import { getSelectedNode, ROOT_NODE_ID, type MindMapEdge, type MindMapNode, useStore } from '../store/useStore';
 
 export default function MobileToolbar() {
   const nodes = useStore((state) => state.nodes);
@@ -7,6 +8,22 @@ export default function MobileToolbar() {
   const addSiblingNode = useStore((state) => state.addSiblingNode);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
+  const { fitView } = useReactFlow<MindMapNode, MindMapEdge>();
+
+  const focusNode = useCallback(
+    (nodeId: string) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          fitView({
+            nodes: [{ id: nodeId }],
+            duration: 400,
+            maxZoom: 1,
+          });
+        });
+      });
+    },
+    [fitView],
+  );
 
   const handleAddChildNode = useCallback((event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -16,8 +33,12 @@ export default function MobileToolbar() {
       return;
     }
 
-    addChildNode(selectedNode.id);
-  }, [addChildNode, selectedNode]);
+    const newNodeId = addChildNode(selectedNode.id);
+
+    if (newNodeId) {
+      focusNode(newNodeId);
+    }
+  }, [addChildNode, focusNode, selectedNode]);
 
   const handleAddSiblingNode = useCallback((event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -27,8 +48,12 @@ export default function MobileToolbar() {
       return;
     }
 
-    addSiblingNode(selectedNode.id);
-  }, [addSiblingNode, selectedNode]);
+    const newNodeId = addSiblingNode(selectedNode.id);
+
+    if (newNodeId) {
+      focusNode(newNodeId);
+    }
+  }, [addSiblingNode, focusNode, selectedNode]);
 
   const handleRemoveNode = useCallback((event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();

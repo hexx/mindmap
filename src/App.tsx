@@ -32,12 +32,27 @@ export default function App() {
   const applyAutoLayout = useStore((state) => state.applyAutoLayout);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
-  const { getIntersectingNodes } = useReactFlow<MindMapNode, MindMapEdge>();
+  const { getIntersectingNodes, fitView } = useReactFlow<MindMapNode, MindMapEdge>();
   const nodeTypes = useMemo<NodeTypes>(
     () => ({
       [MINDMAP_NODE_TYPE]: MindMapNodeComponent,
     }),
     [],
+  );
+
+  const focusNode = useCallback(
+    (nodeId: string) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          fitView({
+            nodes: [{ id: nodeId }],
+            duration: 400,
+            maxZoom: 1,
+          });
+        });
+      });
+    },
+    [fitView],
   );
 
   const handleKeyDown = useCallback(
@@ -48,13 +63,23 @@ export default function App() {
 
       if (event.key === 'Tab') {
         event.preventDefault();
-        addChildNode(selectedNode.id);
+        const newNodeId = addChildNode(selectedNode.id);
+
+        if (newNodeId) {
+          focusNode(newNodeId);
+        }
+
         return;
       }
 
       if (event.key === 'Enter') {
         event.preventDefault();
-        addSiblingNode(selectedNode.id);
+        const newNodeId = addSiblingNode(selectedNode.id);
+
+        if (newNodeId) {
+          focusNode(newNodeId);
+        }
+
         return;
       }
 
@@ -66,7 +91,7 @@ export default function App() {
         }
       }
     },
-    [addChildNode, addSiblingNode, removeNode, selectedNode],
+    [addChildNode, addSiblingNode, focusNode, removeNode, selectedNode],
   );
 
   const handleKeyDownCapture = useCallback(
