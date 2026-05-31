@@ -5,6 +5,7 @@ import {
   type Heading,
 } from 'org-toolkit';
 import { ROOT_NODE_ID, type MindMapEdge, type MindMapNode } from '../store/useStore';
+import { appendOrgModeSideTag } from './orgModeTags';
 
 const normalizeLabel = (label: string | undefined) => label?.trim() || '無題';
 
@@ -44,7 +45,12 @@ const buildHeadings = (
 
   visited.add(nodeId);
 
-  const heading = createHeading(level, normalizeLabel(node.data.label));
+  const label = normalizeLabel(node.data.label);
+  const headingLabel =
+    level === 2
+      ? appendOrgModeSideTag(label, node.position.x < 0 ? 'LEFT' : 'RIGHT')
+      : label;
+  const heading = createHeading(level, headingLabel);
   const children = childrenMap.get(nodeId) ?? [];
 
   return [

@@ -1,5 +1,6 @@
 import { getTextContent, type Heading } from 'org-toolkit';
 import { MINDMAP_NODE_TYPE, ROOT_NODE_ID, type MindMapEdge, type MindMapNode } from '../store/useStore';
+import { stripOrgModeSideTag } from './orgModeTags';
 
 export type ImportedGraph = {
   nodes: MindMapNode[];
@@ -22,7 +23,17 @@ const createRootNode = (): MindMapNode => ({
 
 const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-const headingToLabel = (heading: Heading) => normalizeText(getTextContent(heading)) || '無題';
+const headingToLabel = (heading: Heading) => normalizeText(stripOrgModeSideTag(getTextContent(heading))) || '無題';
+
+const getInitialPosition = (heading: Heading) => {
+  if (heading.level === 2) {
+    return heading.tags.includes('LEFT')
+      ? { x: -250, y: 0 }
+      : { x: 250, y: 0 };
+  }
+
+  return { x: 0, y: 0 };
+};
 
 export const buildImportedGraph = (headings: Heading[]): ImportedGraph => {
   const nodes: MindMapNode[] = [createRootNode()];
@@ -41,7 +52,7 @@ export const buildImportedGraph = (headings: Heading[]): ImportedGraph => {
     nodes.push({
       id: nodeId,
       type: MINDMAP_NODE_TYPE,
-      position: { x: 0, y: 0 },
+      position: getInitialPosition(heading),
       data: {
         label: headingToLabel(heading),
       },
