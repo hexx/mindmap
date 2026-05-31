@@ -160,6 +160,16 @@ export default function App() {
     }
 
     resetGraph();
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const rootFocusTarget = document.querySelector<HTMLButtonElement>(
+          '.mindmap-root-node button, .mindmap-root-node .mindmap-node__label',
+        );
+
+        rootFocusTarget?.focus();
+      });
+    });
   }, [resetGraph]);
 
   const handleSaveToCloud = useCallback(async () => {
