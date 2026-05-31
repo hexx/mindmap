@@ -10,57 +10,51 @@ test.describe('マインドマップのUIテスト', () => {
   });
 
   test('新規作成後にルートノードへフォーカスが当たること', async ({ page }) => {
-    // Arrange: アプリを開いて新規作成ボタンを押せる状態にする。
+    // Arrange: アプリを開いてメニューから新規作成を実行できる状態にする。
     await page.goto('/');
-    const createNewButton = page.getByRole('button', { name: '新規作成' });
+    const menuButton = page.getByRole('button', { name: 'アクションメニュー' });
     const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
 
+    await menuButton.click();
     page.once('dialog', async (dialog) => {
       await dialog.accept();
     });
 
-    // Act: 新規作成を実行する。
-    await createNewButton.click();
+    // Act: メニューの新規作成を実行する。
+    await page.getByRole('button', { name: '新規作成' }).click();
 
     // Assert: ルートノードにフォーカスが戻る。
     await expect(rootNode).toBeFocused();
   });
 
-  test('モバイルではcanvas-actionsがmobile-toolbarと重ならないこと', async ({ page }) => {
-    // Arrange: モバイル幅でアプリを開く。
-    await page.setViewportSize({ width: 375, height: 667 });
+  test('メニューを開くと6つのアクションが縦並びで表示されること', async ({ page }) => {
+    // Arrange: アプリを開いてメニューを開く。
     await page.goto('/');
+    const menuButton = page.getByRole('button', { name: 'アクションメニュー' });
 
-    const canvasActions = page.locator('.canvas-actions');
-    const mobileToolbar = page.locator('.mobile-toolbar');
+    // Act: メニューを開く。
+    await menuButton.click();
 
-    // Assert: 2つの操作領域が重ならず、それぞれ見えている。
-    await expect(canvasActions).toBeVisible();
-    await expect(mobileToolbar).toBeVisible();
+    const dropdown = page.locator('.main-menu__dropdown');
 
-    const [canvasActionsBox, mobileToolbarBox] = await Promise.all([
-      canvasActions.boundingBox(),
-      mobileToolbar.boundingBox(),
-    ]);
-
-    expect(canvasActionsBox).not.toBeNull();
-    expect(mobileToolbarBox).not.toBeNull();
-    expect(canvasActionsBox!.y + canvasActionsBox!.height).toBeLessThan(mobileToolbarBox!.y);
+    // Assert: 6つのアクションが縦並びで表示される。
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown).toHaveCSS('flex-direction', 'column');
+    await expect(page.locator('.main-menu__item')).toHaveCount(6);
+    await expect(page.locator('.main-menu__item').first()).toHaveCSS('justify-content', 'flex-start');
   });
 
-  test('モバイルのcanvas-action-buttonが折り返さず縮まらないこと', async ({ page }) => {
-    // Arrange: モバイル幅でアプリを開く。
-    await page.setViewportSize({ width: 375, height: 667 });
+  test('メニュー外クリックで閉じること', async ({ page }) => {
+    // Arrange: アプリを開いてメニューを開く。
     await page.goto('/');
+    const menuButton = page.getByRole('button', { name: 'アクションメニュー' });
+    await menuButton.click();
 
-    const canvasActions = page.locator('.canvas-actions');
-    const firstActionButton = page.locator('.canvas-action-button').first();
+    // Act: メニュー外の透明オーバーレイをクリックする。
+    await page.locator('.main-menu__overlay').click();
 
-    // Assert: 横並びのボタンが折り返さず、潰れないスタイルになっている。
-    await expect(canvasActions).toHaveCSS('align-items', 'center');
-    await expect(firstActionButton).toHaveCSS('white-space', 'nowrap');
-    await expect(firstActionButton).toHaveCSS('flex-shrink', '0');
-    await expect(firstActionButton).toHaveCSS('font-size', '13.6px');
+    // Assert: メニューが閉じる。
+    await expect(page.locator('.main-menu__dropdown')).toHaveCount(0);
   });
 
   test('ルートノードをダブルクリックすると編集モードに切り替わること', async ({ page }) => {
