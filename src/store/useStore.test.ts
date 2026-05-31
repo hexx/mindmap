@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDirectionalEdge } from '../utils/edgeHandles';
+import { client } from '../utils/cloudMindmaps';
 import {
   MINDMAP_NODE_TYPE,
   ROOT_NODE_ID,
@@ -10,7 +11,19 @@ import {
 
 vi.mock('../utils/cloudMindmaps', () => ({
   client: {
-    api: {},
+    api: {
+      mindmaps: {
+        $get: vi.fn(),
+      },
+      mindmap: {
+        $post: vi.fn(),
+        ':id': {
+          $get: vi.fn(),
+          $put: vi.fn(),
+          $delete: vi.fn(),
+        },
+      },
+    },
   },
 }));
 
@@ -33,6 +46,7 @@ const getSelectedNodeId = () => useStore.getState().nodes.find((node) => node.se
 
 describe('useStoreのテスト', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     window.localStorage.clear();
     useStore.setState(useStore.getInitialState(), true);
   });
@@ -76,6 +90,31 @@ describe('useStoreのテスト', () => {
       source: ROOT_NODE_ID,
       target: childId,
     });
+  });
+
+  it('splits root children to both sides after applyAutoLayout', () => {
+    // Arrange: root の子を3つ用意して、左右振り分けを確認できる状態にする。
+    const rootChildren: MindMapNode[] = [
+      createNode('child-a', { x: 0, y: 100 }, false, 'A'),
+      createNode('child-b', { x: 0, y: 200 }, false, 'B'),
+      createNode('child-c', { x: 0, y: 300 }, false, 'C'),
+    ];
+    const nodes: MindMapNode[] = [createNode(ROOT_NODE_ID, { x: 0, y: 0 }, true, 'root'), ...rootChildren];
+    const edges: MindMapEdge[] = rootChildren.map((child) => createDirectionalEdge(nodes[0], child));
+
+    useStore.setState({
+      nodes,
+      edges,
+      currentCloudMindmapId: 'cloud-1',
+    });
+
+    // Act: 自動整列を実行する。
+    useStore.getState().applyAutoLayout();
+
+    // Assert: root の子が右側と左側の両方に配置される。
+    const laidOutChildren = useStore.getState().nodes.filter((node) => node.id !== ROOT_NODE_ID);
+    expect(laidOutChildren.some((node) => node.position.x > 0)).toBe(true);
+    expect(laidOutChildren.some((node) => node.position.x < 0)).toBe(true);
   });
 
   it('adds a sibling node with the same parent and shifted y position', () => {
@@ -131,6 +170,63 @@ describe('useStoreのテスト', () => {
     expect(nodes).toHaveLength(1);
     expect(nodes[0].id).toBe(ROOT_NODE_ID);
     expect(edges).toHaveLength(0);
+  });
+
+  it('imports a graph and clears the current cloud mindmap id', () => {
+    // Arrange: ダミーのグラフとクラウド ID を用意する。
+    const nodes: MindMapNode[] = [
+      createNode(ROOT_NODE_ID, { x: 0, y: 0 }, false, 'root'),
+      createNode('imported-child', { x: 250, y: 120 }, false, 'imported'),
+    ];
+    const edges: MindMapEdge[] = [createDirectionalEdge(nodes[0], nodes[1])];
+    useStore.setState({
+      currentCloudMindmapId: 'cloud-before-import',
+    });
+
+    // Act: グラフをインポートする。
+    useStore.getState().importGraph(nodes, edges);
+
+    // Assert: 状態が上書きされ、クラウド ID は null に戻る。
+    const state = useStore.getState();
+    expect(state.currentCloudMindmapId).toBeNull();
+    expect(state.nodes).toHaveLength(2);
+    expect(state.edges).toHaveLength(1);
+    expect(state.nodes[0].id).toBe(ROOT_NODE_ID);
+    expect(state.nodes[0].selected).toBe(true);
+  });
+
+  it('updates the cloud mindmap id after saveToCloud succeeds', async () => {
+    // Arrange: 保存 API と一覧 API のレスポンスをモックする。
+    const postResponse = new Response(
+      JSON.stringify({
+        id: 'cloud-saved-1',
+        title: 'ルート（中心概念）',
+        created_at: '2026-05-31T00:00:00.000Z',
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+    const listResponse = new Response('[]', {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    vi.mocked(client.api.mindmap.$post).mockResolvedValueOnce(postResponse);
+    vi.mocked(client.api.mindmaps.$get).mockResolvedValueOnce(listResponse);
+
+    // Act: クラウドへ保存する。
+    await useStore.getState().saveToCloud();
+
+    // Assert: 保存後に currentCloudMindmapId がレスポンス ID で更新される。
+    expect(useStore.getState().currentCloudMindmapId).toBe('cloud-saved-1');
+    expect(vi.mocked(client.api.mindmap.$post)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(client.api.mindmaps.$get)).toHaveBeenCalledTimes(1);
   });
 
   it('moves focus to the nearest sibling above and below with moveFocus', () => {
