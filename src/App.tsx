@@ -143,7 +143,7 @@ export default function App() {
     anchor.download = 'mindmap.org';
     anchor.style.display = 'none';
 
-    document.body.append(anchor);
+    document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);

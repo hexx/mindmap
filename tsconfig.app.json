@@ -16,7 +16,7 @@
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
-    "types": ["vite/client"]
+    "types": ["vite/client", "@cloudflare/workers-types"]
   },
   "include": ["src"]
 }
