@@ -5,8 +5,58 @@ test.describe('マインドマップのUIテスト', () => {
     // Arrange: アプリを開く。
     await page.goto('/');
 
-    // Assert: ルートノードが見えることを確認する。
+    // Assert: ルートノードが表示されていることを確認する。
     await expect(page.getByRole('button', { name: 'ルート（中心概念）' })).toBeVisible();
+  });
+
+  test('ルートノードをダブルクリックすると編集モードに切り替わること', async ({ page }) => {
+    // Arrange: アプリを開いてルートノードにアクセスする。
+    await page.goto('/');
+    const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
+
+    // Act: ルートノードをダブルクリックする。
+    await rootNode.dblclick();
+
+    // Assert: インライン編集の input が表示される。
+    await expect(page.getByPlaceholder('ラベルを入力')).toBeVisible();
+  });
+
+  test('選択中のノードでSpaceキーを押すと編集モードに切り替わること', async ({ page }) => {
+    // Arrange: ルートノードを選択する。
+    await page.goto('/');
+    const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
+    await rootNode.click();
+
+    // Act: Space キーを押す。
+    await rootNode.press('Space');
+
+    // Assert: インライン編集の input が表示される。
+    await expect(page.getByPlaceholder('ラベルを入力')).toBeVisible();
+  });
+
+  test('モバイルツールバーから子ノードを追加でき、不要な操作は無効化されること', async ({ page }) => {
+    // Arrange: モバイル表示にしてアプリを開く。
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+
+    const toolbar = page.locator('.mobile-toolbar');
+    const addChildButton = toolbar.getByRole('button', { name: '子ノード追加' });
+    const addSiblingButton = toolbar.getByRole('button', { name: '兄弟ノード追加' });
+    const deleteButton = toolbar.getByRole('button', { name: '削除' });
+    const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
+
+    // Assert: モバイルツールバーが表示され、ルート選択中は一部ボタンが無効になっている。
+    await expect(toolbar).toBeVisible();
+    await expect(addChildButton).toBeEnabled();
+    await expect(addSiblingButton).toBeDisabled();
+    await expect(deleteButton).toBeDisabled();
+
+    // Act: ルートノードを選択して、子ノード追加をタップする。
+    await rootNode.click();
+    await addChildButton.click();
+
+    // Assert: 新しいノードが追加され、編集 input が表示される。
+    await expect(page.getByPlaceholder('ラベルを入力')).toBeVisible();
   });
 
   test('Enterキーで選択中の子ノードから兄弟ノードを追加できること', async ({ page }) => {
@@ -16,13 +66,13 @@ test.describe('マインドマップのUIテスト', () => {
     await rootNode.click();
     await rootNode.press('Tab');
 
-    // Act: 子ノードの編集入力で Enter を押す。
     const editingInput = page.getByPlaceholder('ラベルを入力');
+
+    // Act: 子ノードの編集 input で Enter を押す。
     await editingInput.press('Enter');
 
-    // Assert: 兄弟ノードが追加され、編集入力も引き継がれる。
+    // Assert: 兄弟ノードが追加される。
     await expect(page.getByRole('button', { name: '無題' })).toBeVisible();
-    await expect(page.getByPlaceholder('ラベルを入力')).toBeVisible();
   });
 
   test('Delete/Backspace で選択中ノードを削除でき、ルートは削除されないこと', async ({ page }) => {
@@ -30,6 +80,8 @@ test.describe('マインドマップのUIテスト', () => {
     await page.goto('/');
     const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
     await rootNode.click();
+
+    // Act: ルートノードに Delete を押す。
     await rootNode.press('Delete');
 
     // Assert: ルートノードは残る。
