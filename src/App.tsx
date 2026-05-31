@@ -30,6 +30,7 @@ export default function App() {
   const addChildNode = useStore((state) => state.addChildNode);
   const addSiblingNode = useStore((state) => state.addSiblingNode);
   const importGraph = useStore((state) => state.importGraph);
+  const resetGraph = useStore((state) => state.resetGraph);
   const saveToCloud = useStore((state) => state.saveToCloud);
   const moveFocus = useStore((state) => state.moveFocus);
   const updateNodeParent = useStore((state) => state.updateNodeParent);
@@ -153,6 +154,14 @@ export default function App() {
     importInputRef.current?.click();
   }, []);
 
+  const handleCreateNew = useCallback(() => {
+    if (!window.confirm('現在の編集内容を破棄して新規作成しますか？')) {
+      return;
+    }
+
+    resetGraph();
+  }, [resetGraph]);
+
   const handleSaveToCloud = useCallback(async () => {
     try {
       await saveToCloud();
@@ -221,6 +230,9 @@ export default function App() {
         <MiniMap zoomable pannable />
       </ReactFlow>
       <div className="canvas-actions">
+        <button type="button" className="canvas-action-button" onClick={handleCreateNew}>
+          新規作成
+        </button>
         <button type="button" className="canvas-action-button" onClick={applyAutoLayout}>
           整列
         </button>
