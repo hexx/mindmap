@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Mindmap icon">
+  <rect width="512" height="512" rx="96" fill="#f8fafc" />
+  <g fill="none" stroke="#2563eb" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 168V128" stroke-width="18" />
+    <path d="M256 344v40" stroke-width="18" />
+    <path d="M256 256H136" stroke-width="18" />
+    <path d="M256 256h120" stroke-width="18" />
+    <path d="M196 208l-40-40" stroke-width="14" />
+    <path d="M196 304l-40 40" stroke-width="14" />
+    <path d="M316 208l40-40" stroke-width="14" />
+    <path d="M316 304l40 40" stroke-width="14" />
+    <circle cx="256" cy="256" r="56" fill="#2563eb" stroke="none" />
+    <circle cx="136" cy="256" r="28" fill="#ffffff" stroke-width="12" />
+    <circle cx="376" cy="256" r="28" fill="#ffffff" stroke-width="12" />
+    <circle cx="176" cy="168" r="22" fill="#ffffff" stroke-width="10" />
+    <circle cx="176" cy="344" r="22" fill="#ffffff" stroke-width="10" />
+    <circle cx="336" cy="168" r="22" fill="#ffffff" stroke-width="10" />
+    <circle cx="336" cy="344" r="22" fill="#ffffff" stroke-width="10" />
+  </g>
+</svg>
