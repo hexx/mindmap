@@ -13,6 +13,7 @@ import {
 } from '../utils/edgeHandles';
 
 export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlowNode>) {
+  const removeNode = useStore((state) => state.removeNode);
   const updateNodeLabel = useStore((state) => state.updateNodeLabel);
   const [isEditing, setIsEditing] = useState(false);
   const [draftLabel, setDraftLabel] = useState(data.label);
@@ -120,6 +121,12 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
           onBlur={commitLabel}
           onKeyDown={(event) => {
             event.stopPropagation();
+
+            if ((event.key === 'Backspace' || event.key === 'Delete') && draftLabel === '') {
+              event.preventDefault();
+              removeNode(id);
+              return;
+            }
 
             if (event.key === 'Enter') {
               event.preventDefault();
