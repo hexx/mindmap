@@ -9,6 +9,15 @@ test.describe('マインドマップのUIテスト', () => {
     await expect(page.getByRole('button', { name: 'ルート（中心概念）' })).toBeVisible();
   });
 
+  test('PWA icon と manifest が head に設定されていること', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator('link[rel="icon"][href="/icon.svg"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="apple-touch-icon"][href="/icon.svg"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="manifest"][href="/manifest.json"]')).toHaveCount(1);
+    await expect(page.locator('meta[name="theme-color"][content="#2563eb"]')).toHaveCount(1);
+  });
+
   test('新規作成後にルートノードへフォーカスが当たること', async ({ page }) => {
     // Arrange: アプリを開いてメニューから新規作成を実行できる状態にする。
     await page.goto('/');
