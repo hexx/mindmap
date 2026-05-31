@@ -13,6 +13,8 @@ import {
 } from '../utils/edgeHandles';
 
 export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlowNode>) {
+  const addChildNode = useStore((state) => state.addChildNode);
+  const addSiblingNode = useStore((state) => state.addSiblingNode);
   const removeNode = useStore((state) => state.removeNode);
   const updateNodeLabel = useStore((state) => state.updateNodeLabel);
   const [isEditing, setIsEditing] = useState(false);
@@ -128,9 +130,17 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
               return;
             }
 
+            if (event.key === 'Tab') {
+              event.preventDefault();
+              commitLabel();
+              addChildNode(id);
+              return;
+            }
+
             if (event.key === 'Enter') {
               event.preventDefault();
               commitLabel();
+              addSiblingNode(id);
             }
           }}
           onKeyUp={(event) => {
