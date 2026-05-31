@@ -14,8 +14,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { createDirectionalEdge, rebuildDirectionalEdges } from '../utils/edgeHandles';
 import {
-  getCloudMindmapUrl,
-  getCloudMindmapsUrl,
+  client,
   type CloudMindmapRecord,
   type CloudMindmapSummary,
 } from '../utils/cloudMindmaps';
@@ -394,21 +393,23 @@ export const useStore = create<MindMapState>()(
         get().applyAutoLayout();
       },
       fetchCloudMindmaps: async () => {
-        const response = await fetch(getCloudMindmapsUrl());
+        const response = await client.api.mindmaps.$get();
 
         if (!response.ok) {
           throw new Error(`クラウド一覧の取得に失敗しました: ${response.status}`);
         }
 
-        const cloudMindmaps = (await response.json()) as CloudMindmapSummary[];
+        const cloudMindmaps: CloudMindmapSummary[] = await response.json();
 
         set({
           cloudMindmaps,
         });
       },
       deleteFromCloud: async (id) => {
-        const response = await fetch(getCloudMindmapUrl(id), {
-          method: 'DELETE',
+        const response = await client.api.mindmap[':id'].$delete({
+          param: {
+            id,
+          },
         });
 
         if (!response.ok) {
@@ -422,13 +423,17 @@ export const useStore = create<MindMapState>()(
         await get().fetchCloudMindmaps();
       },
       loadFromCloud: async (id) => {
-        const response = await fetch(getCloudMindmapUrl(id));
+        const response = await client.api.mindmap[':id'].$get({
+          param: {
+            id,
+          },
+        });
 
         if (!response.ok) {
           throw new Error(`クラウドからの読み込みに失敗しました: ${response.status}`);
         }
 
-        const record = (await response.json()) as CloudMindmapRecord;
+        const record: CloudMindmapRecord = await response.json();
 
         get().importGraph(record.nodes, record.edges);
         set({
@@ -437,24 +442,35 @@ export const useStore = create<MindMapState>()(
       },
       saveToCloud: async () => {
         const { currentCloudMindmapId, edges, nodes } = get();
-        const response = await fetch(currentCloudMindmapId ? getCloudMindmapUrl(currentCloudMindmapId) : getCloudMindmapsUrl(), {
-          method: currentCloudMindmapId ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: currentCloudMindmapId ?? undefined,
-            title: getCloudMindmapTitle(nodes),
-            nodes,
-            edges,
-          }),
-        });
+        const payload = {
+          title: getCloudMindmapTitle(nodes),
+          nodes,
+          edges,
+        };
+
+        const requestPayload = currentCloudMindmapId
+          ? {
+              ...payload,
+              id: currentCloudMindmapId,
+            }
+          : payload;
+
+        const response = currentCloudMindmapId
+          ? await client.api.mindmap[':id'].$put({
+              param: {
+                id: currentCloudMindmapId,
+              },
+              json: requestPayload,
+            })
+          : await client.api.mindmap.$post({
+              json: requestPayload,
+            });
 
         if (!response.ok) {
           throw new Error(`クラウドへの保存に失敗しました: ${response.status}`);
         }
 
-        const savedMindmap = (await response.json()) as CloudMindmapSummary;
+        const savedMindmap: CloudMindmapSummary = await response.json();
 
         set({
           currentCloudMindmapId: savedMindmap.id,

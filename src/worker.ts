@@ -1,6 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
-import type { CloudMindmapRecord, CloudMindmapSummary } from './utils/cloudMindmaps';
+import { Hono, type Context } from 'hono';
+import type { CloudMindmapRecord, CloudMindmapSummary } from './utils/cloudMindmapTypes';
 import { mindmapsTable } from './db/schema';
 
 type Database = ReturnType<typeof drizzle>;
@@ -10,29 +11,21 @@ type Env = {
   ASSETS?: Fetcher;
 };
 
-const toJsonResponse = (data: unknown, init: ResponseInit = {}) =>
-  (() => {
-    const headers = new Headers(init.headers);
-    headers.set('cache-control', 'no-store');
+type MindmapPayload = Partial<CloudMindmapRecord> & {
+  id?: string;
+};
 
-    return Response.json(data, {
-      ...init,
-      headers,
-    });
-  })();
-
-const toErrorResponse = (message: string, status: number) => toJsonResponse({ error: message }, { status });
+const app = new Hono<{ Bindings: Env }>();
+const route = app.basePath('/api');
 
 const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : '予期しないエラーが発生しました');
 
-const parseJsonBody = async <T>(request: Request) => {
-  const contentType = request.headers.get('content-type') ?? '';
-
-  if (!contentType.includes('application/json')) {
-    throw new Error('Content-Type must be application/json');
+const getDb = (db: D1Database | undefined) => {
+  if (!db) {
+    throw new Error('D1 binding is not configured');
   }
 
-  return request.json() as Promise<T>;
+  return drizzle(db);
 };
 
 const toMindmapTitle = (value: unknown) => {
@@ -77,12 +70,11 @@ const loadMindmap = async (db: Database, id: string) => {
   };
 };
 
-const upsertMindmap = async (db: Database, request: Request, pathId?: string) => {
-  const body = await parseJsonBody<Partial<CloudMindmapRecord> & { id?: string }>(request);
-  const id = pathId ?? body.id ?? crypto.randomUUID();
-  const title = toMindmapTitle(body.title);
+const upsertMindmap = async (db: Database, payload: MindmapPayload, pathId?: string) => {
+  const id = pathId ?? payload.id ?? crypto.randomUUID();
+  const title = toMindmapTitle(payload.title);
 
-  if (!Array.isArray(body.nodes) || !Array.isArray(body.edges)) {
+  if (!Array.isArray(payload.nodes) || !Array.isArray(payload.edges)) {
     throw new Error('nodes and edges must be arrays');
   }
 
@@ -101,8 +93,8 @@ const upsertMindmap = async (db: Database, request: Request, pathId?: string) =>
     .values({
       id,
       title,
-      nodesJson: JSON.stringify(body.nodes),
-      edgesJson: JSON.stringify(body.edges),
+      nodesJson: JSON.stringify(payload.nodes),
+      edgesJson: JSON.stringify(payload.edges),
       createdAt,
       updatedAt,
     })
@@ -110,8 +102,8 @@ const upsertMindmap = async (db: Database, request: Request, pathId?: string) =>
       target: mindmapsTable.id,
       set: {
         title,
-        nodesJson: JSON.stringify(body.nodes),
-        edgesJson: JSON.stringify(body.edges),
+        nodesJson: JSON.stringify(payload.nodes),
+        edgesJson: JSON.stringify(payload.edges),
         updatedAt,
       },
     });
@@ -150,84 +142,69 @@ const deleteMindmap = async (db: Database, id: string) => {
   return true;
 };
 
-const fetchStaticAsset = async (request: Request, env: Env) => {
-  if (!env.ASSETS) {
-    return toErrorResponse('ASSETS binding is not configured', 500);
+const fetchStaticAsset = async (c: Context<{ Bindings: Env }>) => {
+  if (!c.env.ASSETS) {
+    return c.json({ error: 'ASSETS binding is not configured' }, 500);
   }
 
-  const assetResponse = await env.ASSETS.fetch(request);
+  const assetResponse = await c.env.ASSETS.fetch(c.req.raw);
 
   if (assetResponse.status !== 404) {
     return assetResponse;
   }
 
-  const url = new URL(request.url);
+  const url = new URL(c.req.url);
 
-  if (request.method !== 'GET' || url.pathname.includes('.')) {
+  if (c.req.method !== 'GET' || url.pathname.includes('.')) {
     return assetResponse;
   }
 
-  return env.ASSETS.fetch(new Request(new URL('/index.html', url), request));
+  return c.env.ASSETS.fetch(new Request(new URL('/index.html', url), c.req.raw));
 };
 
-export default {
-  async fetch(request: Request, env: Env) {
-    const url = new URL(request.url);
+app.onError((error, c) => c.json({ error: toErrorMessage(error) }, 500));
 
-    if (!url.pathname.startsWith('/api/')) {
-      return fetchStaticAsset(request, env);
-    }
+route.get('/mindmaps', async (c) => c.json(await listMindmaps(getDb(c.env.DB))));
 
-    if (!env.DB) {
-      return toErrorResponse('D1 binding is not configured', 500);
-    }
+route.post('/mindmap', async (c) => {
+  const payload = (await c.req.json()) as MindmapPayload;
+  const savedMindmap = await upsertMindmap(getDb(c.env.DB), payload);
 
-    const db = drizzle(env.DB);
+  return c.json(savedMindmap, 201);
+});
 
-    try {
-      if (request.method === 'GET' && url.pathname === '/api/mindmaps') {
-        return toJsonResponse(await listMindmaps(db));
-      }
+route.get('/mindmap/:id', async (c) => {
+  const record = await loadMindmap(getDb(c.env.DB), c.req.param('id'));
 
-      if (request.method === 'POST' && url.pathname === '/api/mindmap') {
-        return toJsonResponse(await upsertMindmap(db, request), { status: 201 });
-      }
+  if (!record) {
+    return c.json({ error: 'Mindmap not found' }, 404);
+  }
 
-      const mindmapMatch = url.pathname.match(/^\/api\/mindmap\/([^/]+)$/);
+  return c.json(record);
+});
 
-      if (!mindmapMatch) {
-        return toErrorResponse('Not found', 404);
-      }
+route.put('/mindmap/:id', async (c) => {
+  const payload = (await c.req.json()) as MindmapPayload;
+  return c.json(await upsertMindmap(getDb(c.env.DB), payload, c.req.param('id')));
+});
 
-      const mindmapId = decodeURIComponent(mindmapMatch[1]);
+route.delete('/mindmap/:id', async (c) => {
+  const deleted = await deleteMindmap(getDb(c.env.DB), c.req.param('id'));
 
-      if (request.method === 'GET') {
-        const record = await loadMindmap(db, mindmapId);
+  if (!deleted) {
+    return c.json({ error: 'Mindmap not found' }, 404);
+  }
 
-        if (!record) {
-          return toErrorResponse('Mindmap not found', 404);
-        }
+  return new Response(null, { status: 204 });
+});
 
-        return toJsonResponse(record);
-      }
+app.all('*', async (c) => {
+  if (c.req.path.startsWith('/api/')) {
+    return c.notFound();
+  }
 
-      if (request.method === 'PUT' || request.method === 'PATCH') {
-        return toJsonResponse(await upsertMindmap(db, request, mindmapId));
-      }
+  return fetchStaticAsset(c);
+});
 
-      if (request.method === 'DELETE') {
-        const deleted = await deleteMindmap(db, mindmapId);
-
-        if (!deleted) {
-          return toErrorResponse('Mindmap not found', 404);
-        }
-
-        return new Response(null, { status: 204 });
-      }
-
-      return toErrorResponse('Method not allowed', 405);
-    } catch (error) {
-      return toErrorResponse(toErrorMessage(error), 500);
-    }
-  },
-};
+export type AppType = typeof app;
+export default app;
