@@ -7,6 +7,7 @@ import {
   type NodeTypes,
 } from '@xyflow/react';
 import { useCallback, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import MainMenu from './components/MainMenu';
 import MobileToolbar from './components/MobileToolbar';
 import SavedMindmapsModal from './components/SavedMindmapsModal';
 import MindMapNodeComponent from './nodes/MindMapNode';
@@ -239,26 +240,14 @@ export default function App() {
         <Controls />
         <MiniMap zoomable pannable />
       </ReactFlow>
-      <div className="canvas-actions">
-        <button type="button" className="canvas-action-button" onClick={handleCreateNew}>
-          新規作成
-        </button>
-        <button type="button" className="canvas-action-button" onClick={applyAutoLayout}>
-          整列
-        </button>
-        <button type="button" className="canvas-action-button" onClick={handleSaveToCloud}>
-          クラウドに保存
-        </button>
-        <button type="button" className="canvas-action-button" onClick={handleOpenCloudMindmaps}>
-          クラウドから読込
-        </button>
-        <button type="button" className="canvas-action-button" onClick={handleImportClick}>
-          インポート
-        </button>
-        <button type="button" className="canvas-action-button" onClick={handleExportOrgMode}>
-          org-modeでエクスポート
-        </button>
-      </div>
+      <MainMenu
+        onNew={handleCreateNew}
+        onLayout={applyAutoLayout}
+        onSave={handleSaveToCloud}
+        onLoad={handleOpenCloudMindmaps}
+        onImport={handleImportClick}
+        onExport={handleExportOrgMode}
+      />
       <input ref={importInputRef} type="file" accept=".org" onChange={handleImportFileChange} style={{ display: 'none' }} />
       <MobileToolbar />
       <SavedMindmapsModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
