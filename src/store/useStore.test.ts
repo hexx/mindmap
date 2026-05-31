@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ROOT_NODE_ID, useStore } from './useStore';
+import { createDirectionalEdge } from '../utils/edgeHandles';
+import {
+  MINDMAP_NODE_TYPE,
+  ROOT_NODE_ID,
+  type MindMapEdge,
+  type MindMapNode,
+  useStore,
+} from './useStore';
 
 vi.mock('../utils/cloudMindmaps', () => ({
   client: {
@@ -7,7 +14,24 @@ vi.mock('../utils/cloudMindmaps', () => ({
   },
 }));
 
-describe('useStore', () => {
+const createNode = (
+  id: string,
+  position: MindMapNode['position'],
+  selected = false,
+  label = id,
+): MindMapNode => ({
+  id,
+  type: MINDMAP_NODE_TYPE,
+  position,
+  data: {
+    label,
+  },
+  selected,
+});
+
+const getSelectedNodeId = () => useStore.getState().nodes.find((node) => node.selected)?.id;
+
+describe('useStoreのテスト', () => {
   beforeEach(() => {
     window.localStorage.clear();
     useStore.setState(useStore.getInitialState(), true);
@@ -28,6 +52,7 @@ describe('useStore', () => {
   });
 
   it('adds a child node and edge for addChildNode', () => {
+    // Arrange: ルートノードから子ノードを1つ追加する。
     const childId = useStore.getState().addChildNode(ROOT_NODE_ID);
 
     expect(childId).not.toBeNull();
@@ -53,7 +78,38 @@ describe('useStore', () => {
     });
   });
 
+  it('adds a sibling node with the same parent and shifted y position', () => {
+    // Arrange: ルート配下の子ノードを作ってから、その兄弟を追加する。
+    const childId = useStore.getState().addChildNode(ROOT_NODE_ID);
+
+    expect(childId).not.toBeNull();
+    if (!childId) {
+      throw new Error('Expected addChildNode to return a node id');
+    }
+
+    // Act: 同じ親を持つ兄弟ノードを追加する。
+    const siblingId = useStore.getState().addSiblingNode(childId);
+
+    expect(siblingId).not.toBeNull();
+    if (!siblingId) {
+      throw new Error('Expected addSiblingNode to return a node id');
+    }
+
+    // Assert: 兄弟ノードの親が同じで、Y 座標が異なることを確認する。
+    const { edges, nodes } = useStore.getState();
+    const childNode = nodes.find((node) => node.id === childId);
+    const siblingNode = nodes.find((node) => node.id === siblingId);
+
+    expect(childNode).toBeDefined();
+    expect(siblingNode).toBeDefined();
+    expect(edges.find((edge) => edge.target === childId)?.source).toBe(ROOT_NODE_ID);
+    expect(edges.find((edge) => edge.target === siblingId)?.source).toBe(ROOT_NODE_ID);
+    expect(siblingNode?.position.y).not.toBe(childNode?.position.y);
+    expect(siblingNode?.selected).toBe(true);
+  });
+
   it('removes a node and all descendants with removeNode', () => {
+    // Arrange: 親子孫の3段階ツリーを作る。
     const childId = useStore.getState().addChildNode(ROOT_NODE_ID);
 
     expect(childId).not.toBeNull();
@@ -74,6 +130,125 @@ describe('useStore', () => {
 
     expect(nodes).toHaveLength(1);
     expect(nodes[0].id).toBe(ROOT_NODE_ID);
+    expect(edges).toHaveLength(0);
+  });
+
+  it('moves focus to the nearest sibling above and below with moveFocus', () => {
+    // Arrange: root の子を縦に並べて、下側のノードを選択する。
+    const nodes: MindMapNode[] = [
+      createNode(ROOT_NODE_ID, { x: 0, y: 0 }, false, 'root'),
+      createNode('top-child', { x: 250, y: 50 }, false, 'top'),
+      createNode('middle-child', { x: 250, y: 150 }, false, 'middle'),
+      createNode('bottom-child', { x: 250, y: 250 }, true, 'bottom'),
+    ];
+    const edges: MindMapEdge[] = [
+      createDirectionalEdge(nodes[0], nodes[1]),
+      createDirectionalEdge(nodes[0], nodes[2]),
+      createDirectionalEdge(nodes[0], nodes[3]),
+    ];
+
+    useStore.setState({ nodes, edges });
+
+    // Act: 上方向へ移動する。
+    useStore.getState().moveFocus('up');
+
+    // Assert: ひとつ上の兄弟ノードにフォーカスが移る。
+    expect(getSelectedNodeId()).toBe('middle-child');
+
+    // Act: さらに下方向へ移動する。
+    useStore.getState().moveFocus('down');
+
+    // Assert: 元のノードより下の兄弟へフォーカスが戻る。
+    expect(getSelectedNodeId()).toBe('bottom-child');
+  });
+
+  it('moves focus to the parent with moveFocus left', () => {
+    // Arrange: 孫ノードを選択した状態を作る。
+    const nodes: MindMapNode[] = [
+      createNode(ROOT_NODE_ID, { x: 0, y: 0 }, false, 'root'),
+      createNode('parent', { x: 250, y: 100 }, false, 'parent'),
+      createNode('child', { x: 500, y: 100 }, true, 'child'),
+    ];
+    const edges: MindMapEdge[] = [
+      createDirectionalEdge(nodes[0], nodes[1]),
+      createDirectionalEdge(nodes[1], nodes[2]),
+    ];
+
+    useStore.setState({ nodes, edges });
+
+    // Act: 左方向へ移動する。
+    useStore.getState().moveFocus('left');
+
+    // Assert: 親ノードへフォーカスが移る。
+    expect(getSelectedNodeId()).toBe('parent');
+  });
+
+  it('moves focus to the first child with moveFocus right', () => {
+    // Arrange: root の子を複数用意し、root を選択する。
+    const nodes: MindMapNode[] = [
+      createNode(ROOT_NODE_ID, { x: 0, y: 0 }, true, 'root'),
+      createNode('upper-child', { x: 250, y: 40 }, false, 'upper'),
+      createNode('lower-child', { x: 250, y: 200 }, false, 'lower'),
+    ];
+    const edges: MindMapEdge[] = [
+      createDirectionalEdge(nodes[0], nodes[1]),
+      createDirectionalEdge(nodes[0], nodes[2]),
+    ];
+
+    useStore.setState({ nodes, edges });
+
+    // Act: 右方向へ移動する。
+    useStore.getState().moveFocus('right');
+
+    // Assert: y 座標が小さい子ノードが選択される。
+    expect(getSelectedNodeId()).toBe('upper-child');
+  });
+
+  it('reparents a node to the new parent with updateNodeParent', () => {
+    // Arrange: 別々の親を持つ子ノードを作る。
+    const firstParentId = useStore.getState().addChildNode(ROOT_NODE_ID);
+
+    expect(firstParentId).not.toBeNull();
+    if (!firstParentId) {
+      throw new Error('Expected addChildNode to return a node id');
+    }
+
+    const secondParentId = useStore.getState().addSiblingNode(firstParentId);
+
+    expect(secondParentId).not.toBeNull();
+    if (!secondParentId) {
+      throw new Error('Expected addSiblingNode to return a node id');
+    }
+
+    const childId = useStore.getState().addChildNode(firstParentId);
+
+    expect(childId).not.toBeNull();
+    if (!childId) {
+      throw new Error('Expected addChildNode to return a node id');
+    }
+
+    // Act: 子ノードの親を新しいノードへ付け替える。
+    useStore.getState().updateNodeParent(childId, secondParentId);
+
+    // Assert: エッジの source が新しい親に切り替わる。
+    expect(useStore.getState().edges.find((edge) => edge.target === childId)?.source).toBe(secondParentId);
+  });
+
+  it('resets the graph back to only the root node with resetGraph', () => {
+    // Arrange: 何かしらノードを追加した状態にする。
+    const childId = useStore.getState().addChildNode(ROOT_NODE_ID);
+
+    expect(childId).not.toBeNull();
+
+    // Act: グラフを初期状態へ戻す。
+    useStore.getState().resetGraph();
+
+    // Assert: ルートノードだけが残る。
+    const { edges, nodes } = useStore.getState();
+
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].id).toBe(ROOT_NODE_ID);
+    expect(nodes[0].selected).toBe(true);
     expect(edges).toHaveLength(0);
   });
 });
