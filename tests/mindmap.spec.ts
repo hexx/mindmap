@@ -48,6 +48,21 @@ test.describe('マインドマップのUIテスト', () => {
     expect(canvasActionsBox!.y + canvasActionsBox!.height).toBeLessThan(mobileToolbarBox!.y);
   });
 
+  test('モバイルのcanvas-action-buttonが折り返さず縮まらないこと', async ({ page }) => {
+    // Arrange: モバイル幅でアプリを開く。
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+
+    const canvasActions = page.locator('.canvas-actions');
+    const firstActionButton = page.locator('.canvas-action-button').first();
+
+    // Assert: 横並びのボタンが折り返さず、潰れないスタイルになっている。
+    await expect(canvasActions).toHaveCSS('align-items', 'center');
+    await expect(firstActionButton).toHaveCSS('white-space', 'nowrap');
+    await expect(firstActionButton).toHaveCSS('flex-shrink', '0');
+    await expect(firstActionButton).toHaveCSS('font-size', '13.6px');
+  });
+
   test('ルートノードをダブルクリックすると編集モードに切り替わること', async ({ page }) => {
     // Arrange: アプリを開いてルートノードにアクセスする。
     await page.goto('/');
