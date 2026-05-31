@@ -124,6 +124,10 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
           onKeyDown={(event) => {
             event.stopPropagation();
 
+            if (event.nativeEvent.isComposing) {
+              return;
+            }
+
             if ((event.key === 'Backspace' || event.key === 'Delete') && draftLabel === '') {
               event.preventDefault();
               removeNode(id);
