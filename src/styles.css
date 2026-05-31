@@ -97,6 +97,23 @@ body {
 }
 
 @media (max-width: 768px) {
+  .canvas-actions {
+    top: 16px;
+    right: 16px;
+    bottom: auto;
+    left: 16px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .canvas-actions::-webkit-scrollbar {
+    display: none;
+  }
+
   .mobile-toolbar {
     position: fixed;
     left: 16px;

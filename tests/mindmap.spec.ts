@@ -26,6 +26,28 @@ test.describe('マインドマップのUIテスト', () => {
     await expect(rootNode).toBeFocused();
   });
 
+  test('モバイルではcanvas-actionsがmobile-toolbarと重ならないこと', async ({ page }) => {
+    // Arrange: モバイル幅でアプリを開く。
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+
+    const canvasActions = page.locator('.canvas-actions');
+    const mobileToolbar = page.locator('.mobile-toolbar');
+
+    // Assert: 2つの操作領域が重ならず、それぞれ見えている。
+    await expect(canvasActions).toBeVisible();
+    await expect(mobileToolbar).toBeVisible();
+
+    const [canvasActionsBox, mobileToolbarBox] = await Promise.all([
+      canvasActions.boundingBox(),
+      mobileToolbar.boundingBox(),
+    ]);
+
+    expect(canvasActionsBox).not.toBeNull();
+    expect(mobileToolbarBox).not.toBeNull();
+    expect(canvasActionsBox!.y + canvasActionsBox!.height).toBeLessThan(mobileToolbarBox!.y);
+  });
+
   test('ルートノードをダブルクリックすると編集モードに切り替わること', async ({ page }) => {
     // Arrange: アプリを開いてルートノードにアクセスする。
     await page.goto('/');
