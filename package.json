@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "deploy": "npm run build && wrangler deploy",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.2",
@@ -21,12 +23,15 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260531.1",
+    "@playwright/test": "^1.54.2",
     "@types/d3-hierarchy": "^3.1.7",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^26.1.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",
+    "vitest": "^3.2.4",
     "wrangler": "^4.95.0"
   }
 }
