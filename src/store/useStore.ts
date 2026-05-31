@@ -341,8 +341,9 @@ export const useStore = create<MindMapState>()(
         const { nodes, edges } = get();
         const currentNode = nodes.find((node) => node.id === nodeId);
         const parentId = getParentId(nodeId, edges);
+        const parentNode = nodes.find((node) => node.id === parentId);
 
-        if (!currentNode || !parentId) {
+        if (!currentNode || !parentId || !parentNode) {
           return null;
         }
 
@@ -369,7 +370,7 @@ export const useStore = create<MindMapState>()(
           ],
           edges: [
             ...edges,
-            createDirectionalEdge(currentNode, nextNode),
+            createDirectionalEdge(parentNode, nextNode),
           ],
         });
 
