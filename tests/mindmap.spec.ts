@@ -9,6 +9,23 @@ test.describe('マインドマップのUIテスト', () => {
     await expect(page.getByRole('button', { name: 'ルート（中心概念）' })).toBeVisible();
   });
 
+  test('新規作成後にルートノードへフォーカスが当たること', async ({ page }) => {
+    // Arrange: アプリを開いて新規作成ボタンを押せる状態にする。
+    await page.goto('/');
+    const createNewButton = page.getByRole('button', { name: '新規作成' });
+    const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
+
+    page.once('dialog', async (dialog) => {
+      await dialog.accept();
+    });
+
+    // Act: 新規作成を実行する。
+    await createNewButton.click();
+
+    // Assert: ルートノードにフォーカスが戻る。
+    await expect(rootNode).toBeFocused();
+  });
+
   test('ルートノードをダブルクリックすると編集モードに切り替わること', async ({ page }) => {
     // Arrange: アプリを開いてルートノードにアクセスする。
     await page.goto('/');
