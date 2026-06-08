@@ -220,8 +220,7 @@ export default function App() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={(_, node) => {
-          const intersectingNodes = getIntersectingNodes(node, true).filter((candidate) => candidate.id !== node.id);
-          const nextParentNode = intersectingNodes[0];
+          const nextParentNode = getIntersectingNodes(node, true).find((candidate) => candidate.id !== node.id);
 
           if (!nextParentNode) {
             return;
