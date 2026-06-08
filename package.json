@@ -9,7 +9,8 @@
     "deploy": "npm run build && wrangler deploy",
     "preview": "vite preview",
     "test": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "oxlint -D correctness -D suspicious -D perf -A no-map-spread"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.2",
@@ -29,6 +30,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^26.1.0",
+    "oxlint": "^1.68.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.14",
     "vitest": "^3.2.4",
