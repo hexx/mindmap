@@ -142,7 +142,7 @@ const getRootChildIds = (nodes: MindMapNode[], edges: MindMapEdge[]) => {
 
   return nodes
     .filter((node) => getParentId(node.id, edges) === ROOT_NODE_ID)
-    .sort((left, right) => (nodeOrder.get(left.id) ?? 0) - (nodeOrder.get(right.id) ?? 0))
+    .toSorted((left, right) => (nodeOrder.get(left.id) ?? 0) - (nodeOrder.get(right.id) ?? 0))
     .map((node) => node.id);
 };
 
@@ -195,7 +195,7 @@ const buildRadialPositions = (nodes: MindMapNode[], rootChildIds: string[], edge
 
   const hierarchy = stratify<LayoutEntry>()(
     Array.from(nodeIds)
-      .sort((left, right) => (nodeOrder.get(left) ?? 0) - (nodeOrder.get(right) ?? 0))
+      .toSorted((left, right) => (nodeOrder.get(left) ?? 0) - (nodeOrder.get(right) ?? 0))
       .map((id) => ({
         id,
         parentId: id === ROOT_NODE_ID ? null : getParentId(id, edges) ?? ROOT_NODE_ID,
@@ -541,7 +541,7 @@ export const useStore = create<MindMapState>()(
                 .map((edge) => nodesById.get(edge.target))
                 .filter((node): node is MindMapNode => Boolean(node));
 
-              nextSelectedNode = childNodes.sort(compareByYThenOrder(nodeOrder))[0];
+              nextSelectedNode = childNodes.toSorted(compareByYThenOrder(nodeOrder))[0];
               break;
             }
             case 'up':
@@ -557,7 +557,7 @@ export const useStore = create<MindMapState>()(
                 .filter((node) =>
                   direction === 'up' ? node.position.y < selectedNode.position.y : node.position.y > selectedNode.position.y,
                 )
-                .sort(compareByDistanceThenOrder(selectedNode.position.y, nodeOrder, direction));
+                .toSorted(compareByDistanceThenOrder(selectedNode.position.y, nodeOrder, direction));
 
               nextSelectedNode = siblingNodes[0];
               break;
