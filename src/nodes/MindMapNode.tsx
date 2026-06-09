@@ -4,13 +4,15 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
-import { type MindMapNode as MindMapFlowNode, useStore } from '../store/useStore';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { type MindMapNode as MindMapFlowNode, useStore } from '@/store/useStore';
 import {
   LEFT_SOURCE_HANDLE_ID,
   LEFT_TARGET_HANDLE_ID,
   RIGHT_SOURCE_HANDLE_ID,
   RIGHT_TARGET_HANDLE_ID,
-} from '../utils/edgeHandles';
+} from '@/utils/edgeHandles';
 
 export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlowNode>) {
   const addChildNode = useStore((state) => state.addChildNode);
@@ -103,20 +105,20 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
 
   return (
     <div
-      className={[
-        'mindmap-node',
-        selected ? 'mindmap-node--selected' : '',
-        isEditing ? 'mindmap-node--editing' : '',
-      ].join(' ')}
+      className={cn(
+        'mindmap-node min-w-[180px] flex items-center gap-2.5 rounded-full border bg-background px-3.5 py-3 shadow-lg transition-all',
+        selected && 'border-primary shadow-primary/20',
+        isEditing && 'border-foreground',
+      )}
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
     >
       <Handle type="target" position={Position.Left} id={LEFT_TARGET_HANDLE_ID} className="mindmap-node__handle" />
       <Handle type="source" position={Position.Left} id={LEFT_SOURCE_HANDLE_ID} className="mindmap-node__handle" />
       {isEditing ? (
-        <input
+        <Input
           ref={inputRef}
-          className="mindmap-node__input nodrag nopan"
+          className="nodrag nopan flex-1 border-0 bg-transparent text-center font-semibold focus-visible:ring-0 focus-visible:ring-offset-0"
           value={draftLabel}
           placeholder="ラベルを入力"
           onChange={(event) => setDraftLabel(event.target.value)}
@@ -155,7 +157,7 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
         <button
           type="button"
           ref={buttonRef}
-          className="mindmap-node__label nodrag nopan"
+          className="nodrag nopan flex-1 cursor-text appearance-none border-0 bg-transparent text-center font-bold"
         >
           {data.label || '無題'}
         </button>

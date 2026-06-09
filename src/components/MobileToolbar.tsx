@@ -1,6 +1,8 @@
 import { useCallback, useMemo, type PointerEvent } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { getSelectedNode, ROOT_NODE_ID, type MindMapEdge, type MindMapNode, useStore } from '../store/useStore';
+import { Plus, GitBranch, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { getSelectedNode, ROOT_NODE_ID, type MindMapEdge, type MindMapNode, useStore } from '@/store/useStore';
 
 export default function MobileToolbar() {
   const nodes = useStore((state) => state.nodes);
@@ -12,8 +14,8 @@ export default function MobileToolbar() {
 
   const focusNode = useCallback(
     (nodeId: string) => {
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(() => {
+        globalThis.requestAnimationFrame(() => {
           fitView({
             nodes: [{ id: nodeId }],
             duration: 400,
@@ -70,26 +72,37 @@ export default function MobileToolbar() {
   const isRootSelected = selectedNode?.id === ROOT_NODE_ID;
 
   return (
-    <div className="mobile-toolbar" aria-label="モバイル用ノード操作">
-      <button type="button" className="mobile-toolbar__button" onPointerDown={handleAddChildNode} disabled={isDisabled}>
+    <div
+      className="fixed bottom-4 left-4 right-4 z-30 flex gap-2 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden"
+      aria-label="モバイル用ノード操作"
+    >
+      <Button
+        variant="outline"
+        className="flex-1"
+        onPointerDown={handleAddChildNode}
+        disabled={isDisabled}
+      >
+        <Plus className="mr-2 size-4" />
         子ノード追加
-      </button>
-      <button
-        type="button"
-        className="mobile-toolbar__button"
+      </Button>
+      <Button
+        variant="outline"
+        className="flex-1"
         onPointerDown={handleAddSiblingNode}
         disabled={isDisabled || isRootSelected}
       >
+        <GitBranch className="mr-2 size-4" />
         兄弟ノード追加
-      </button>
-      <button
-        type="button"
-        className="mobile-toolbar__button mobile-toolbar__button--danger"
+      </Button>
+      <Button
+        variant="destructive"
+        className="flex-1"
         onPointerDown={handleRemoveNode}
         disabled={isDisabled || isRootSelected}
       >
+        <Trash2 className="mr-2 size-4" />
         削除
-      </button>
+      </Button>
     </div>
   );
 }
