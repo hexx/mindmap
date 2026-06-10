@@ -50,7 +50,11 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
 
   useEffect(() => {
     if (selected && !isEditing && data.label !== '') {
-      buttonRef.current?.focus();
+      globalThis.requestAnimationFrame(() => {
+        globalThis.requestAnimationFrame(() => {
+          buttonRef.current?.focus();
+        });
+      });
     }
   }, []);
 

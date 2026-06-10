@@ -9,6 +9,15 @@ test.describe('マインドマップのUIテスト', () => {
     await expect(page.getByRole('button', { name: 'ルート（中心概念）' })).toBeVisible();
   });
 
+  test('アプリ起動直後にルートノードに自動でフォーカスが当たること', async ({ page }) => {
+    // Arrange: アプリを開く。
+    await page.goto('/');
+
+    // Assert: ユーザーが操作する前に、ルートノードにフォーカスが当たっていること。
+    const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
+    await expect(rootNode).toBeFocused();
+  });
+
   test('PWA icon と manifest が head に設定されていること', async ({ page }) => {
     await page.goto('/');
 
