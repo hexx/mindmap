@@ -1,4 +1,12 @@
-import { useCallback, useState } from 'react';
+import { Menu, Plus, LayoutDashboard, CloudUpload, CloudDownload, FileUp, FileDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type MainMenuProps = {
   onNew: () => void;
@@ -17,68 +25,48 @@ export default function MainMenu({
   onImport,
   onExport,
 }: MainMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const closeMenu = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
-  const toggleMenu = useCallback(() => {
-    setIsOpen((current) => !current);
-  }, []);
-
-  const handleAction = useCallback(
-    (action: () => void) => {
-      action();
-      closeMenu();
-    },
-    [closeMenu],
-  );
-
   return (
-    <div className="main-menu">
-      {isOpen ? <div className="main-menu__overlay" onClick={closeMenu} /> : null}
-      <button
-        type="button"
-        className="main-menu__toggle"
-        aria-label="アクションメニュー"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={toggleMenu}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path
-            d="M4 6h16M4 12h16M4 18h16"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-          />
-        </svg>
-      </button>
-      {isOpen ? (
-        <div className="main-menu__dropdown" role="menu" aria-label="アクション一覧">
-          <button type="button" className="main-menu__item" onClick={() => handleAction(onNew)}>
-            新規作成
-          </button>
-          <button type="button" className="main-menu__item" onClick={() => handleAction(onLayout)}>
-            整列
-          </button>
-          <button type="button" className="main-menu__item" onClick={() => handleAction(onSave)}>
-            クラウドに保存
-          </button>
-          <button type="button" className="main-menu__item" onClick={() => handleAction(onLoad)}>
-            クラウドから読込
-          </button>
-          <button type="button" className="main-menu__item" onClick={() => handleAction(onImport)}>
-            インポート
-          </button>
-          <button type="button" className="main-menu__item" onClick={() => handleAction(onExport)}>
-            org-modeでエクスポート
-          </button>
-        </div>
-      ) : null}
+    <div className="absolute top-4 right-4 z-40">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="icon" variant="outline" className="size-12 rounded-full shadow-lg">
+            <Menu className="size-5" />
+            <span className="sr-only">アクションメニュー</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={onNew}>
+              <Plus className="mr-2 size-4" />
+              新規作成
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onLayout}>
+              <LayoutDashboard className="mr-2 size-4" />
+              整列
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={onSave}>
+              <CloudUpload className="mr-2 size-4" />
+              クラウドに保存
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onLoad}>
+              <CloudDownload className="mr-2 size-4" />
+              クラウドから読込
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={onImport}>
+              <FileUp className="mr-2 size-4" />
+              インポート
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onExport}>
+              <FileDown className="mr-2 size-4" />
+              org-modeでエクスポート
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

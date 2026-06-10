@@ -50,8 +50,8 @@ export default function App() {
 
   const focusNode = useCallback(
     (nodeId: string) => {
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(() => {
+        globalThis.requestAnimationFrame(() => {
           fitView({
             nodes: [{ id: nodeId }],
             duration: 400,
@@ -148,7 +148,7 @@ export default function App() {
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    globalThis.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
   }, [edges, nodes]);
 
   const handleImportClick = useCallback(() => {
@@ -156,14 +156,14 @@ export default function App() {
   }, []);
 
   const handleCreateNew = useCallback(() => {
-    if (!window.confirm('現在の編集内容を破棄して新規作成しますか？')) {
+    if (!globalThis.confirm('現在の編集内容を破棄して新規作成しますか？')) {
       return;
     }
 
     resetGraph();
 
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(() => {
         const rootFocusTarget = document.querySelector<HTMLButtonElement>(
           '.mindmap-root-node button, .mindmap-root-node .mindmap-node__label',
         );
@@ -177,7 +177,8 @@ export default function App() {
     try {
       await saveToCloud();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'クラウドへの保存に失敗しました');
+      const message = error instanceof Error ? error.message : 'クラウドへの保存に失敗しました';
+      globalThis.alert(message);
     }
   }, [saveToCloud]);
 
@@ -211,7 +212,7 @@ export default function App() {
   );
 
   return (
-    <div className="app-shell">
+    <div className="size-full">
       <ReactFlow<MindMapNode, MindMapEdge>
         nodes={nodes}
         edges={edges}
@@ -247,7 +248,7 @@ export default function App() {
         onImport={handleImportClick}
         onExport={handleExportOrgMode}
       />
-      <input ref={importInputRef} type="file" accept=".org" onChange={handleImportFileChange} style={{ display: 'none' }} />
+      <input ref={importInputRef} type="file" accept=".org" onChange={handleImportFileChange} className="hidden" />
       <MobileToolbar />
       <SavedMindmapsModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>

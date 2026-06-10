@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '../store/useStore';
+import { Cloud, Trash2, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useStore } from '@/store/useStore';
 
 type SavedMindmapsModalProps = {
   isOpen: boolean;
@@ -55,91 +67,98 @@ export default function SavedMindmapsModal({ isOpen, onClose }: SavedMindmapsMod
     };
   }, [fetchCloudMindmaps, isOpen]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   const handleOpen = async (id: string) => {
     try {
       await loadFromCloud(id);
       onClose();
     } catch (error) {
-      window.alert(toErrorMessage(error));
+      setErrorMessage(toErrorMessage(error));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('このマインドマップを削除しますか？')) {
+    if (!globalThis.confirm('このマインドマップを削除しますか？')) {
       return;
     }
 
     try {
       await deleteFromCloud(id);
     } catch (error) {
-      window.alert(toErrorMessage(error));
+      setErrorMessage(toErrorMessage(error));
     }
   };
 
   return (
-    <div className="cloud-mindmaps-modal" onClick={onClose}>
-      <div className="cloud-mindmaps-modal__overlay" />
-      <div
-        className="cloud-mindmaps-modal__panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="saved-mindmaps-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="cloud-mindmaps-modal__header">
-          <div>
-            <h2 id="saved-mindmaps-title" className="cloud-mindmaps-modal__title">
-              保存されたマインドマップ
-            </h2>
-            <p className="cloud-mindmaps-modal__subtitle">クラウド上の一覧から、読み込みや削除ができます。</p>
-          </div>
-          <button type="button" className="cloud-mindmaps-modal__close" onClick={onClose} aria-label="閉じる">
-            ×
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[80vh] overflow-hidden sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Cloud className="size-5" />
+            保存されたマインドマップ
+          </DialogTitle>
+          <DialogDescription>
+            クラウド上の一覧から、読み込みや削除ができます。
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="cloud-mindmaps-modal__body">
-          {errorMessage ? <p className="cloud-mindmaps-modal__error">{errorMessage}</p> : null}
+        <Separator />
 
-          {isLoading && cloudMindmaps.length === 0 ? <p className="cloud-mindmaps-modal__status">読み込み中...</p> : null}
+        <div className="overflow-y-auto pr-1">
+          {errorMessage && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
 
-          {!isLoading && cloudMindmaps.length === 0 ? (
-            <p className="cloud-mindmaps-modal__empty">保存されたマインドマップはありません</p>
-          ) : (
-            <ul className="cloud-mindmaps-modal__list">
+          {isLoading && cloudMindmaps.length === 0 && (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              読み込み中...
+            </div>
+          )}
+
+          {!isLoading && cloudMindmaps.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+              <Cloud className="mb-2 size-8" />
+              <p>保存されたマインドマップはありません</p>
+            </div>
+          )}
+
+          {cloudMindmaps.length > 0 && (
+            <div className="flex flex-col gap-3">
               {cloudMindmaps.map((mindmap) => (
-                <li key={mindmap.id} className="cloud-mindmaps-modal__item">
-                  <div className="cloud-mindmaps-modal__info">
-                    <span className="cloud-mindmaps-modal__item-title">{mindmap.title}</span>
-                    <span className="cloud-mindmaps-modal__item-meta">{formatSavedAt(mindmap.created_at)}</span>
+                <div
+                  key={mindmap.id}
+                  className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{mindmap.title}</p>
+                    <Badge variant="secondary" className="mt-1">
+                      {formatSavedAt(mindmap.created_at)}
+                    </Badge>
                   </div>
 
-                  <div className="cloud-mindmaps-modal__actions">
-                    <button
-                      type="button"
-                      className="cloud-mindmaps-modal__button cloud-mindmaps-modal__button--primary"
+                  <div className="ml-4 flex gap-2">
+                    <Button
+                      size="sm"
                       onClick={() => void handleOpen(mindmap.id)}
                     >
                       開く
-                    </button>
-                    <button
-                      type="button"
-                      className="cloud-mindmaps-modal__button cloud-mindmaps-modal__button--danger"
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
                       onClick={() => void handleDelete(mindmap.id)}
                     >
-                      削除
-                    </button>
+                      <Trash2 className="size-4" />
+                    </Button>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
