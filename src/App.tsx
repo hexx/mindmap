@@ -220,7 +220,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="size-full">
+    <div className="h-screen w-screen overflow-hidden">
       <ReactFlow<MindMapNode, MindMapEdge>
         nodes={nodes}
         edges={edges}
