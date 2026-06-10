@@ -6,7 +6,7 @@ import {
   useReactFlow,
   type NodeTypes,
 } from '@xyflow/react';
-import { useCallback, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import MainMenu from './components/MainMenu';
 import MobileToolbar from './components/MobileToolbar';
 import SavedMindmapsModal from './components/SavedMindmapsModal';
@@ -210,6 +210,14 @@ export default function App() {
     },
     [importGraph],
   );
+
+  // ReactFlowが追加するaria-hiddenを除去（アクセシビリティ対応）
+  useEffect(() => {
+    const renderer = document.querySelector('.react-flow__renderer');
+    if (renderer) {
+      renderer.removeAttribute('aria-hidden');
+    }
+  }, []);
 
   return (
     <div className="size-full">
