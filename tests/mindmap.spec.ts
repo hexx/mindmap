@@ -18,6 +18,36 @@ test.describe('マインドマップのUIテスト', () => {
     await expect(rootNode).toBeFocused();
   });
 
+  test('Tabキーで子ノードを追加した直後に、そのノードの入力欄にフォーカスが当たること', async ({ page }) => {
+    // Arrange: アプリを開いてルートノードを選択する。
+    await page.goto('/');
+    const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
+    await rootNode.click();
+
+    // Act: Tabキーで子ノードを追加する。
+    await rootNode.press('Tab');
+
+    // Assert: 新しく表示された入力欄にフォーカスが当たっていること。
+    const input = page.getByPlaceholder('ラベルを入力');
+    await expect(input).toBeFocused();
+  });
+
+  test('Enterキーで兄弟ノードを追加した直後に、そのノードの入力欄にフォーカスが当たること', async ({ page }) => {
+    // Arrange: アプリを開いてルートノードを選択し、Tabキーで子ノードを追加する。
+    await page.goto('/');
+    const rootNode = page.getByRole('button', { name: 'ルート（中心概念）' });
+    await rootNode.click();
+    await rootNode.press('Tab');
+
+    // Act: 子ノードの入力欄でEnterキーを押して兄弟ノードを追加する。
+    const firstInput = page.getByPlaceholder('ラベルを入力');
+    await firstInput.press('Enter');
+
+    // Assert: 新たに生成された兄弟ノードの入力欄にフォーカスが当たっていること。
+    const secondInput = page.getByPlaceholder('ラベルを入力');
+    await expect(secondInput).toBeFocused();
+  });
+
   test('PWA icon と manifest が head に設定されていること', async ({ page }) => {
     await page.goto('/');
 

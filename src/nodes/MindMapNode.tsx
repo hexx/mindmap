@@ -35,8 +35,12 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
 
   useEffect(() => {
     if (isEditing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      globalThis.requestAnimationFrame(() => {
+        globalThis.requestAnimationFrame(() => {
+          inputRef.current?.focus();
+          inputRef.current?.select();
+        });
+      });
     }
   }, [isEditing]);
 
