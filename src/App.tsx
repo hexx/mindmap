@@ -21,6 +21,7 @@ import {
   type MindMapNode,
   useStore,
 } from './store/useStore';
+import { useHistoryStore } from './store/useHistoryStore';
 
 export default function App() {
   const nodes = useStore((state) => state.nodes);
@@ -65,6 +66,23 @@ export default function App() {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
+      // Undo/Redo
+      if ((event.ctrlKey || event.metaKey) && event.code === 'KeyZ') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          useHistoryStore.getState().redo();
+        } else {
+          useHistoryStore.getState().undo();
+        }
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key === 'y') {
+        event.preventDefault();
+        useHistoryStore.getState().redo();
+        return;
+      }
+
       if (!selectedNode) {
         return;
       }
