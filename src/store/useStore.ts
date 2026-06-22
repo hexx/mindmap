@@ -18,6 +18,7 @@ import {
   type CloudMindmapRecord,
   type CloudMindmapSummary,
 } from '../utils/cloudMindmaps';
+import { useHistoryStore } from './useHistoryStore';
 
 export type MindMapNodeData = {
   label: string;
@@ -225,12 +226,14 @@ export const useStore = create<MindMapState>()(
       ...createInitialState(),
       setNodes: (nodes) => set({ nodes }),
       setEdges: (edges) => set({ edges }),
-      resetGraph: () =>
+      resetGraph: () => {
+        useHistoryStore.getState().pushSnapshot();
         set((state) => ({
           ...createInitialGraph(),
           cloudMindmaps: state.cloudMindmaps,
           currentCloudMindmapId: null,
-        })),
+        }));
+      },
       onNodesChange: (changes) =>
         set((state) => {
           const nextNodes = applyNodeChanges(changes, state.nodes);
@@ -266,6 +269,7 @@ export const useStore = create<MindMapState>()(
           };
         }),
       addNode: ({ data, position, parentId, id }) => {
+        useHistoryStore.getState().pushSnapshot();
         const nodeId = id ?? createNodeId();
         const parentNode = parentId ? get().nodes.find((node) => node.id === parentId) : undefined;
 
@@ -299,6 +303,7 @@ export const useStore = create<MindMapState>()(
         return nodeId;
       },
       addChildNode: (parentId) => {
+        useHistoryStore.getState().pushSnapshot();
         const { nodes, edges } = get();
         const parentNode = nodes.find((node) => node.id === parentId);
 
@@ -338,6 +343,7 @@ export const useStore = create<MindMapState>()(
         return nodeId;
       },
       addSiblingNode: (nodeId) => {
+        useHistoryStore.getState().pushSnapshot();
         const { nodes, edges } = get();
         const currentNode = nodes.find((node) => node.id === nodeId);
         const parentId = getParentId(nodeId, edges);
@@ -379,6 +385,7 @@ export const useStore = create<MindMapState>()(
         return siblingId;
       },
       importGraph: (nodes, edges) => {
+        useHistoryStore.getState().pushSnapshot();
         const nextNodes = nodes.map((node) => ({
           ...node,
           selected: node.id === ROOT_NODE_ID,
@@ -479,11 +486,12 @@ export const useStore = create<MindMapState>()(
 
         await get().fetchCloudMindmaps();
       },
-      removeNode: (nodeId) =>
-        set((state) => {
-          if (nodeId === ROOT_NODE_ID) {
-            return state;
-          }
+      removeNode: (nodeId) => {
+        if (nodeId === ROOT_NODE_ID) {
+          return;
+        }
+        useHistoryStore.getState().pushSnapshot();
+        return set((state) => {
 
           const descendantIds = collectDescendants(nodeId, state.edges);
           const parentId = getParentId(nodeId, state.edges);
@@ -502,9 +510,11 @@ export const useStore = create<MindMapState>()(
             })),
             edges: remainingEdges,
           };
-        }),
-      updateNodeLabel: (nodeId, label) =>
-        set((state) => ({
+        });
+      },
+      updateNodeLabel: (nodeId, label) => {
+        useHistoryStore.getState().pushSnapshot();
+        return set((state) => ({
           nodes: state.nodes.map((node) =>
             node.id === nodeId
               ? {
@@ -516,7 +526,8 @@ export const useStore = create<MindMapState>()(
                 }
               : node,
           ),
-        })),
+        }));
+      },
       moveFocus: (direction) =>
         set((state) => {
           const selectedNode = getSelectedNode(state.nodes);
@@ -598,6 +609,9 @@ export const useStore = create<MindMapState>()(
           if (collectDescendants(nodeId, state.edges).has(newParentId)) {
             return state;
           }
+
+          // All early returns passed, now push snapshot
+          useHistoryStore.getState().pushSnapshot();
 
           return {
             nodes: state.nodes,
