@@ -80,7 +80,8 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
     if (data.label === '') {
       setIsEditing(true);
     }
-  }, [data.label]);
+  // 初回マウント時に空ラベルなら編集モードを開始する（依存配列は空でよい）
+  }, []);
 
   const commitLabel = useCallback(() => {
     updateNodeLabel(id, draftLabel);

@@ -22,6 +22,7 @@ import {
   useStore,
 } from './store/useStore';
 import { useHistoryStore } from './store/useHistoryStore';
+import { useFocusNode } from './hooks/useFocusNode';
 
 export default function App() {
   const nodes = useStore((state) => state.nodes);
@@ -41,7 +42,7 @@ export default function App() {
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { getIntersectingNodes, fitView } = useReactFlow<MindMapNode, MindMapEdge>();
+  const { getIntersectingNodes } = useReactFlow<MindMapNode, MindMapEdge>();
   const nodeTypes = useMemo<NodeTypes>(
     () => ({
       [MINDMAP_NODE_TYPE]: MindMapNodeComponent,
@@ -49,20 +50,7 @@ export default function App() {
     [],
   );
 
-  const focusNode = useCallback(
-    (nodeId: string) => {
-      globalThis.requestAnimationFrame(() => {
-        globalThis.requestAnimationFrame(() => {
-          fitView({
-            nodes: [{ id: nodeId }],
-            duration: 400,
-            maxZoom: 1,
-          });
-        });
-      });
-    },
-    [fitView],
-  );
+  const focusNode = useFocusNode();
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
