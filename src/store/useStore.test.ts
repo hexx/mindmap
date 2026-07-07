@@ -4,6 +4,7 @@ import { client } from '../utils/cloudMindmaps';
 import {
   MINDMAP_NODE_TYPE,
   ROOT_NODE_ID,
+  createInitialState,
   type MindMapEdge,
   type MindMapNode,
   useStore,
@@ -48,7 +49,7 @@ describe('useStoreのテスト', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
-    useStore.setState(useStore.getInitialState(), true);
+    useStore.setState(createInitialState());
   });
 
   it('starts with only the root node', () => {

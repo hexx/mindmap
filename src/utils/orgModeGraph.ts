@@ -1,4 +1,5 @@
 import { getTextContent, type Heading } from 'org-toolkit';
+import { LAYOUT } from '../constants';
 import { MINDMAP_NODE_TYPE, ROOT_NODE_ID, type MindMapEdge, type MindMapNode } from '../store/useStore';
 import { stripOrgModeSideTag } from './orgModeTags';
 
@@ -28,8 +29,8 @@ const headingToLabel = (heading: Heading) => normalizeText(stripOrgModeSideTag(g
 const getInitialPosition = (heading: Heading) => {
   if (heading.level === 2) {
     return heading.tags.includes('LEFT')
-      ? { x: -250, y: 0 }
-      : { x: 250, y: 0 };
+      ? { x: -LAYOUT.CHILD_X_OFFSET, y: 0 }
+      : { x: LAYOUT.CHILD_X_OFFSET, y: 0 };
   }
 
   return { x: 0, y: 0 };

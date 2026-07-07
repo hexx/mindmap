@@ -1,8 +1,8 @@
 import { useCallback, useMemo, type PointerEvent } from 'react';
-import { useReactFlow } from '@xyflow/react';
 import { Plus, GitBranch, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getSelectedNode, ROOT_NODE_ID, type MindMapEdge, type MindMapNode, useStore } from '@/store/useStore';
+import { getSelectedNode, ROOT_NODE_ID, useStore } from '@/store/useStore';
+import { useFocusNode } from '@/hooks/useFocusNode';
 
 export default function MobileToolbar() {
   const nodes = useStore((state) => state.nodes);
@@ -10,22 +10,7 @@ export default function MobileToolbar() {
   const addSiblingNode = useStore((state) => state.addSiblingNode);
   const removeNode = useStore((state) => state.removeNode);
   const selectedNode = useMemo(() => getSelectedNode(nodes), [nodes]);
-  const { fitView } = useReactFlow<MindMapNode, MindMapEdge>();
-
-  const focusNode = useCallback(
-    (nodeId: string) => {
-      globalThis.requestAnimationFrame(() => {
-        globalThis.requestAnimationFrame(() => {
-          fitView({
-            nodes: [{ id: nodeId }],
-            duration: 400,
-            maxZoom: 1,
-          });
-        });
-      });
-    },
-    [fitView],
-  );
+  const focusNode = useFocusNode();
 
   const handleAddChildNode = useCallback((event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();

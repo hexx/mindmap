@@ -12,6 +12,7 @@ import {
 import { stratify, tree } from 'd3-hierarchy';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { LAYOUT } from '../constants';
 import { createDirectionalEdge, rebuildDirectionalEdges } from '../utils/edgeHandles';
 import {
   client,
@@ -94,7 +95,7 @@ const createInitialGraph = () => ({
   edges: [],
 });
 
-const createInitialState = () => ({
+export const createInitialState = () => ({
   ...createInitialGraph(),
   cloudMindmaps: [] as CloudMindmapSummary[],
   currentCloudMindmapId: null as string | null,
@@ -180,7 +181,7 @@ const splitRootChildIds = (nodes: MindMapNode[], rootChildIds: string[]) => {
   );
 };
 
-const getChildOffset = (parentNode: MindMapNode) => (parentNode.position.x < 0 ? -250 : 250);
+const getChildOffset = (parentNode: MindMapNode) => (parentNode.position.x < 0 ? -LAYOUT.CHILD_X_OFFSET : LAYOUT.CHILD_X_OFFSET);
 
 const buildRadialPositions = (nodes: MindMapNode[], rootChildIds: string[], edges: MindMapEdge[], invertX: boolean) => {
   if (rootChildIds.length === 0) {
@@ -202,7 +203,7 @@ const buildRadialPositions = (nodes: MindMapNode[], rootChildIds: string[], edge
         parentId: id === ROOT_NODE_ID ? null : getParentId(id, edges) ?? ROOT_NODE_ID,
       })),
   );
-  const laidOutRoot = tree<LayoutEntry>().nodeSize([100, 300])(hierarchy);
+  const laidOutRoot = tree<LayoutEntry>().nodeSize(LAYOUT.TREE_NODE_SIZE)(hierarchy);
 
   const positions = new Map<string, XYPosition>();
 
@@ -312,7 +313,7 @@ export const useStore = create<MindMapState>()(
         }
 
         const nodeId = createNodeId();
-        const nextX = parentId === ROOT_NODE_ID ? 250 : parentNode.position.x + getChildOffset(parentNode);
+        const nextX = parentId === ROOT_NODE_ID ? LAYOUT.CHILD_X_OFFSET : parentNode.position.x + getChildOffset(parentNode);
         const nextNode: MindMapNode = {
           id: nodeId,
           type: MINDMAP_NODE_TYPE,
@@ -354,13 +355,13 @@ export const useStore = create<MindMapState>()(
         }
 
         const siblingId = createNodeId();
-        const nextX = parentId === ROOT_NODE_ID ? (currentNode.position.x < 0 ? -250 : 250) : currentNode.position.x;
+        const nextX = parentId === ROOT_NODE_ID ? (currentNode.position.x < 0 ? -LAYOUT.CHILD_X_OFFSET : LAYOUT.CHILD_X_OFFSET) : currentNode.position.x;
         const nextNode: MindMapNode = {
           id: siblingId,
           type: MINDMAP_NODE_TYPE,
           position: {
             x: nextX,
-            y: currentNode.position.y + 100,
+            y: currentNode.position.y + LAYOUT.SIBLING_Y_OFFSET,
           },
           data: { label: '' },
           selected: true,

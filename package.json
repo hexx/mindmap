@@ -9,7 +9,6 @@
     "deploy": "npm run build && wrangler deploy",
     "preview": "vite preview",
     "test": "vitest",
-    "test:e2e": "playwright test",
     "lint": "oxlint -D correctness -D suspicious -D perf -A no-map-spread"
   },
   "dependencies": {
@@ -32,7 +31,6 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260531.1",
-    "@playwright/test": "^1.54.2",
     "@tailwindcss/vite": "^4.3.0",
     "@types/d3-hierarchy": "^3.1.7",
     "@types/react": "^19.2.15",

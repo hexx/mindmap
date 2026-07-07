@@ -14,7 +14,6 @@ type HistoryState = {
   pushSnapshot: () => void;
   undo: () => void;
   redo: () => void;
-  clearHistory: () => void;
 };
 
 const getCurrentSnapshot = (): Snapshot => {
@@ -82,12 +81,6 @@ export const useHistoryStore = create<HistoryState>()((set, get) => ({
     });
   },
 
-  clearHistory: () => {
-    set({
-      undoStack: [],
-      redoStack: [],
-    });
-  },
 }));
 
 export const canUndo = () => useHistoryStore.getState().undoStack.length > 0;
