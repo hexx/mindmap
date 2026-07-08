@@ -235,13 +235,17 @@ export default function App() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={(_, node) => {
+          // ドラッグ操作の完了時に履歴を保存する
+          // （onNodesChange ではドラッグ中の頻繁な更新に対応するため履歴を取らない）
           const nextParentNode = getIntersectingNodes(node, true).find((candidate) => candidate.id !== node.id);
 
-          if (!nextParentNode) {
-            return;
+          if (nextParentNode) {
+            // 親の付け替えが発生する場合は updateNodeParent 内で pushSnapshot が実行される
+            updateNodeParent(node.id, nextParentNode.id);
+          } else {
+            // 位置変更のみのドラッグ（リペアレントなし）の場合はここで履歴を保存
+            useHistoryStore.getState().pushSnapshot();
           }
-
-          updateNodeParent(node.id, nextParentNode.id);
         }}
         onKeyDownCapture={handleKeyDownCapture}
         onKeyDown={handleKeyDown}

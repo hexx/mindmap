@@ -589,38 +589,39 @@ export const useStore = create<MindMapState>()(
           };
         }),
       updateNodeParent: (nodeId, newParentId) => {
-        set((state) => {
-          if (nodeId === ROOT_NODE_ID || nodeId === newParentId) {
-            return state;
-          }
+        // 早期リターンチェックは set の外で事前に行い、set コールバックを純粋に保つ
+        if (nodeId === ROOT_NODE_ID || nodeId === newParentId) {
+          return;
+        }
 
-          const targetNode = state.nodes.find((node) => node.id === nodeId);
-          const parentNode = state.nodes.find((node) => node.id === newParentId);
+        const currentState = get();
+        const targetNode = currentState.nodes.find((node) => node.id === nodeId);
+        const parentNode = currentState.nodes.find((node) => node.id === newParentId);
 
-          if (!targetNode || !parentNode) {
-            return state;
-          }
+        if (!targetNode || !parentNode) {
+          return;
+        }
 
-          const currentParentId = getParentId(nodeId, state.edges);
+        const currentParentId = getParentId(nodeId, currentState.edges);
 
-          if (currentParentId === newParentId) {
-            return state;
-          }
+        if (currentParentId === newParentId) {
+          return;
+        }
 
-          if (collectDescendants(nodeId, state.edges).has(newParentId)) {
-            return state;
-          }
+        if (collectDescendants(nodeId, currentState.edges).has(newParentId)) {
+          return;
+        }
 
-          // All early returns passed, now push snapshot
-          useHistoryStore.getState().pushSnapshot();
+        // すべての早期リターンを通過したため、更新が確定。履歴を保存してから状態を更新する
+        useHistoryStore.getState().pushSnapshot();
 
-          return {
-            nodes: state.nodes,
-            edges: [
-              ...state.edges.filter((edge) => edge.target !== nodeId),
-              createDirectionalEdge(parentNode, targetNode),
-            ],
-          };
+        // 事前に取得済みのノードを直接使用する（set 内での再検索は不要かつ non-null assertion も回避）
+        set({
+          nodes: currentState.nodes,
+          edges: [
+            ...currentState.edges.filter((edge) => edge.target !== nodeId),
+            createDirectionalEdge(parentNode, targetNode),
+          ],
         });
 
         get().applyAutoLayout();

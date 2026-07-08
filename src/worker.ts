@@ -16,7 +16,7 @@ type MindmapPayload = Partial<CloudMindmapRecord> & {
 };
 
 const app = new Hono<{ Bindings: Env }>();
-const route = app.basePath('/api');
+const api = new Hono<{ Bindings: Env }>();
 
 const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : '予期しないエラーが発生しました');
 
@@ -162,18 +162,18 @@ const fetchStaticAsset = async (c: Context<{ Bindings: Env }>) => {
   return c.env.ASSETS.fetch(new Request(new URL('/index.html', url), c.req.raw));
 };
 
-app.onError((error, c) => c.json({ error: toErrorMessage(error) }, 500));
+api.onError((error, c) => c.json({ error: toErrorMessage(error) }, 500));
 
-route.get('/mindmaps', async (c) => c.json(await listMindmaps(getDb(c.env.DB))));
+api.get('/mindmaps', async (c) => c.json(await listMindmaps(getDb(c.env.DB))));
 
-route.post('/mindmap', async (c) => {
+api.post('/mindmap', async (c) => {
   const payload = (await c.req.json()) as MindmapPayload;
   const savedMindmap = await upsertMindmap(getDb(c.env.DB), payload);
 
   return c.json(savedMindmap, 201);
 });
 
-route.get('/mindmap/:id', async (c) => {
+api.get('/mindmap/:id', async (c) => {
   const record = await loadMindmap(getDb(c.env.DB), c.req.param('id'));
 
   if (!record) {
@@ -183,12 +183,12 @@ route.get('/mindmap/:id', async (c) => {
   return c.json(record);
 });
 
-route.put('/mindmap/:id', async (c) => {
+api.put('/mindmap/:id', async (c) => {
   const payload = (await c.req.json()) as MindmapPayload;
   return c.json(await upsertMindmap(getDb(c.env.DB), payload, c.req.param('id')));
 });
 
-route.delete('/mindmap/:id', async (c) => {
+api.delete('/mindmap/:id', async (c) => {
   const deleted = await deleteMindmap(getDb(c.env.DB), c.req.param('id'));
 
   if (!deleted) {
@@ -198,6 +198,9 @@ route.delete('/mindmap/:id', async (c) => {
   return new Response(null, { status: 204 });
 });
 
+// /api プレフィックス付きでルートをマウント
+app.route('/api', api);
+
 app.all('*', async (c) => {
   if (c.req.path.startsWith('/api/')) {
     return c.notFound();
@@ -206,5 +209,6 @@ app.all('*', async (c) => {
   return fetchStaticAsset(c);
 });
 
+// app.route によりルート情報が app に含まれるため、typeof app で正しく型推論される
 export type AppType = typeof app;
 export default app;
