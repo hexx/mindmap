@@ -23,6 +23,7 @@ import {
 } from './store/useStore';
 import { useHistoryStore } from './store/useHistoryStore';
 import { useFocusNode } from './hooks/useFocusNode';
+import { useSaveMindmap } from './hooks/useCloudMindmaps';
 
 export default function App() {
   const nodes = useStore((state) => state.nodes);
@@ -34,7 +35,6 @@ export default function App() {
   const addSiblingNode = useStore((state) => state.addSiblingNode);
   const importGraph = useStore((state) => state.importGraph);
   const resetGraph = useStore((state) => state.resetGraph);
-  const saveToCloud = useStore((state) => state.saveToCloud);
   const moveFocus = useStore((state) => state.moveFocus);
   const updateNodeParent = useStore((state) => state.updateNodeParent);
   const applyAutoLayout = useStore((state) => state.applyAutoLayout);
@@ -179,14 +179,20 @@ export default function App() {
     });
   }, [resetGraph]);
 
-  const handleSaveToCloud = useCallback(async () => {
-    try {
-      await saveToCloud();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'クラウドへの保存に失敗しました';
-      globalThis.alert(message);
+  const saveMutation = useSaveMindmap();
+
+  const handleSaveToCloud = useCallback(() => {
+    // 保存中は重複実行を防止
+    if (saveMutation.isPending) {
+      return;
     }
-  }, [saveToCloud]);
+
+    saveMutation.mutate(undefined, {
+      onError: (error) => {
+        globalThis.alert(error.message);
+      },
+    });
+  }, [saveMutation]);
 
   const handleOpenCloudMindmaps = useCallback(() => {
     setIsModalOpen(true);
