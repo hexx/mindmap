@@ -24,7 +24,6 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const didInitializeRef = useRef(false);
-  const wasSelectedRef = useRef(selected);
   const wasEditingRef = useRef(isEditing);
 
   useEffect(() => {
@@ -52,6 +51,8 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
     wasEditingRef.current = isEditing;
   }, [isEditing]);
 
+  // ノードが選択された時、または編集モードが解除された時にボタンにフォーカスを当てる
+  // （初回マウント時にすでに selected なノードもカバーする）
   useEffect(() => {
     if (selected && !isEditing && data.label !== '') {
       globalThis.requestAnimationFrame(() => {
@@ -60,14 +61,9 @@ export default function MindMapNode({ id, data, selected }: NodeProps<MindMapFlo
         });
       });
     }
-  }, []);
 
-  useEffect(() => {
-    if (!wasSelectedRef.current && selected && !isEditing) {
-      buttonRef.current?.focus();
-    }
-
-    wasSelectedRef.current = selected;
+    // data.label はフォーカス条件としてのみ使用し、ラベル変更時の再フォーカスは不要
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing, selected]);
 
   useEffect(() => {
