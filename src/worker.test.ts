@@ -28,7 +28,7 @@ const createQueryProxy = (): Record<string, unknown> => {
     limit?: number;
   } = { type: 'unknown', table: 'mindmaps' };
 
-  const chainMethods: Record<string, (...args: unknown[]) => unknown> = {
+  const chainMethods: Record<string, (...args: any[]) => any> = {
     select: (...cols: unknown[]) => {
       plan.type = 'select';
       plan.columns = cols.map((c) => {
@@ -285,9 +285,9 @@ describe('worker API integration tests', () => {
         { DB: createD1Binding() },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as Record<string, unknown>;
       expect(Array.isArray(body)).toBe(true);
-      expect(body.length).toBeGreaterThan(0);
+      expect((body as unknown as unknown[]).length).toBeGreaterThan(0);
     });
   });
 
@@ -304,7 +304,7 @@ describe('worker API integration tests', () => {
         { DB: createD1Binding() },
       );
       expect(res.status).toBe(201);
-      const body = await res.json();
+      const body = await res.json() as Record<string, unknown>;
       expect(body).toHaveProperty('id');
       expect(body.title).toBe('新しいマインドマップ');
       expect(body).toHaveProperty('created_at');
@@ -355,7 +355,7 @@ describe('worker API integration tests', () => {
         { DB: createD1Binding() },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as Record<string, unknown>;
       expect(body.id).toBe('existing-id');
       expect(body.title).toBe('既存マップ');
       expect(body).toHaveProperty('nodes');
@@ -407,7 +407,7 @@ describe('worker API integration tests', () => {
         { DB: createD1Binding() },
       );
       expect(res.status).toBe(200);
-      const body = await res.json();
+      const body = await res.json() as Record<string, unknown>;
       expect(body.id).toBe('new-upsert-id');
     });
   });
