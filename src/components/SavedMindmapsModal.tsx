@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Cloud, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +10,12 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useStore } from '@/store/useStore';
+import {
+  useMindmapList,
+  useLoadMindmap,
+  useDeleteMindmap,
+  toErrorMessage as cloudErrorMessage,
+} from '@/hooks/useCloudMindmaps';
 
 type SavedMindmapsModalProps = {
   isOpen: boolean;
@@ -31,61 +35,30 @@ const formatSavedAt = (createdAt: string) => {
   });
 };
 
-const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : '予期しないエラーが発生しました');
-
 export default function SavedMindmapsModal({ isOpen, onClose }: SavedMindmapsModalProps) {
-  const cloudMindmaps = useStore((state) => state.cloudMindmaps);
-  const fetchCloudMindmaps = useStore((state) => state.fetchCloudMindmaps);
-  const loadFromCloud = useStore((state) => state.loadFromCloud);
-  const deleteFromCloud = useStore((state) => state.deleteFromCloud);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const {
+    data: cloudMindmaps = [],
+    isLoading,
+    error: queryError,
+  } = useMindmapList(isOpen);
+  const loadMutation = useLoadMindmap();
+  const deleteMutation = useDeleteMindmap();
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+  const firstError = queryError ?? loadMutation.error ?? deleteMutation.error;
+  const errorMessage = firstError ? cloudErrorMessage(firstError) : null;
 
-    let isActive = true;
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    void fetchCloudMindmaps()
-      .catch((error) => {
-        if (isActive) {
-          setErrorMessage(toErrorMessage(error));
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [fetchCloudMindmaps, isOpen]);
-
-  const handleOpen = async (id: string) => {
-    try {
-      await loadFromCloud(id);
-      onClose();
-    } catch (error) {
-      setErrorMessage(toErrorMessage(error));
-    }
+  const handleOpen = (id: string) => {
+    loadMutation.mutate(id, {
+      onSuccess: () => onClose(),
+    });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!globalThis.confirm('このマインドマップを削除しますか？')) {
       return;
     }
 
-    try {
-      await deleteFromCloud(id);
-    } catch (error) {
-      setErrorMessage(toErrorMessage(error));
-    }
+    deleteMutation.mutate(id);
   };
 
   return (
@@ -141,14 +114,14 @@ export default function SavedMindmapsModal({ isOpen, onClose }: SavedMindmapsMod
                   <div className="ml-4 flex gap-2">
                     <Button
                       size="sm"
-                      onClick={() => void handleOpen(mindmap.id)}
+                      onClick={() => handleOpen(mindmap.id)}
                     >
                       開く
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => void handleDelete(mindmap.id)}
+                      onClick={() => handleDelete(mindmap.id)}
                     >
                       <Trash2 className="size-4" />
                     </Button>

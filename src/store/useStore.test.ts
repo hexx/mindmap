@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { createDirectionalEdge } from '../utils/edgeHandles';
-import { client } from '../utils/cloudMindmaps';
 import {
   MINDMAP_NODE_TYPE,
   ROOT_NODE_ID,
@@ -9,24 +8,6 @@ import {
   type MindMapNode,
   useStore,
 } from './useStore';
-
-vi.mock('../utils/cloudMindmaps', () => ({
-  client: {
-    api: {
-      mindmaps: {
-        $get: vi.fn(),
-      },
-      mindmap: {
-        $post: vi.fn(),
-        ':id': {
-          $get: vi.fn(),
-          $put: vi.fn(),
-          $delete: vi.fn(),
-        },
-      },
-    },
-  },
-}));
 
 const createNode = (
   id: string,
@@ -47,7 +28,6 @@ const getSelectedNodeId = () => useStore.getState().nodes.find((node) => node.se
 
 describe('useStoreのテスト', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     window.localStorage.clear();
     useStore.setState(createInitialState());
   });
@@ -194,40 +174,6 @@ describe('useStoreのテスト', () => {
     expect(state.edges).toHaveLength(1);
     expect(state.nodes[0].id).toBe(ROOT_NODE_ID);
     expect(state.nodes[0].selected).toBe(true);
-  });
-
-  it('updates the cloud mindmap id after saveToCloud succeeds', async () => {
-    // Arrange: 保存 API と一覧 API のレスポンスをモックする。
-    const postResponse = new Response(
-      JSON.stringify({
-        id: 'cloud-saved-1',
-        title: 'ルート（中心概念）',
-        created_at: '2026-05-31T00:00:00.000Z',
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
-    );
-    const listResponse = new Response('[]', {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    vi.mocked(client.api.mindmap.$post).mockResolvedValueOnce(postResponse);
-    vi.mocked(client.api.mindmaps.$get).mockResolvedValueOnce(listResponse);
-
-    // Act: クラウドへ保存する。
-    await useStore.getState().saveToCloud();
-
-    // Assert: 保存後に currentCloudMindmapId がレスポンス ID で更新される。
-    expect(useStore.getState().currentCloudMindmapId).toBe('cloud-saved-1');
-    expect(vi.mocked(client.api.mindmap.$post)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(client.api.mindmaps.$get)).toHaveBeenCalledTimes(1);
   });
 
   it('moves focus to the nearest sibling above and below with moveFocus', () => {

@@ -14,11 +14,6 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { LAYOUT } from '../constants';
 import { createDirectionalEdge, rebuildDirectionalEdges } from '../utils/edgeHandles';
-import {
-  client,
-  type CloudMindmapRecord,
-  type CloudMindmapSummary,
-} from '../utils/cloudMindmaps';
 import { useHistoryStore } from './useHistoryStore';
 
 export type MindMapNodeData = {
@@ -48,7 +43,7 @@ type LayoutEntry = {
 type MindMapState = {
   nodes: MindMapNode[];
   edges: MindMapEdge[];
-  cloudMindmaps: CloudMindmapSummary[];
+  // currentCloudMindmapId: 外部（useCloudMindmaps等）から useStore.setState で操作するためメソッド不要
   currentCloudMindmapId: string | null;
   setNodes: (nodes: MindMapNode[]) => void;
   setEdges: (edges: MindMapEdge[]) => void;
@@ -65,10 +60,6 @@ type MindMapState = {
   moveFocus: (direction: FocusDirection) => void;
   updateNodeParent: (nodeId: string, newParentId: string) => void;
   applyAutoLayout: () => void;
-  fetchCloudMindmaps: () => Promise<void>;
-  deleteFromCloud: (id: string) => Promise<void>;
-  loadFromCloud: (id: string) => Promise<void>;
-  saveToCloud: () => Promise<void>;
 };
 
 export const getSelectedNode = (nodes: MindMapNode[]) => nodes.find((node) => node.selected);
@@ -97,11 +88,8 @@ const createInitialGraph = () => ({
 
 export const createInitialState = () => ({
   ...createInitialGraph(),
-  cloudMindmaps: [] as CloudMindmapSummary[],
   currentCloudMindmapId: null as string | null,
 });
-
-const getCloudMindmapTitle = (nodes: MindMapNode[]) => nodes.find((node) => node.id === ROOT_NODE_ID)?.data.label.trim() || '無題のマインドマップ';
 
 const collectDescendants = (nodeId: string, edges: MindMapEdge[]) => {
   const descendantIds = new Set<string>([nodeId]);
@@ -229,11 +217,10 @@ export const useStore = create<MindMapState>()(
       setEdges: (edges) => set({ edges }),
       resetGraph: () => {
         useHistoryStore.getState().pushSnapshot();
-        set((state) => ({
+        set({
           ...createInitialGraph(),
-          cloudMindmaps: state.cloudMindmaps,
           currentCloudMindmapId: null,
-        }));
+        });
       },
       onNodesChange: (changes) =>
         set((state) => {
@@ -400,92 +387,6 @@ export const useStore = create<MindMapState>()(
         });
 
         get().applyAutoLayout();
-      },
-      fetchCloudMindmaps: async () => {
-        const response = await client.api.mindmaps.$get();
-
-        if (!response.ok) {
-          throw new Error(`クラウド一覧の取得に失敗しました: ${response.status}`);
-        }
-
-        const cloudMindmaps: CloudMindmapSummary[] = await response.json();
-
-        set({
-          cloudMindmaps,
-        });
-      },
-      deleteFromCloud: async (id) => {
-        const response = await client.api.mindmap[':id'].$delete({
-          param: {
-            id,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`クラウドからの削除に失敗しました: ${response.status}`);
-        }
-
-        set((state) => ({
-          currentCloudMindmapId: state.currentCloudMindmapId === id ? null : state.currentCloudMindmapId,
-        }));
-
-        await get().fetchCloudMindmaps();
-      },
-      loadFromCloud: async (id) => {
-        const response = await client.api.mindmap[':id'].$get({
-          param: {
-            id,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`クラウドからの読み込みに失敗しました: ${response.status}`);
-        }
-
-        const record: CloudMindmapRecord = await response.json();
-
-        get().importGraph(record.nodes, record.edges);
-        set({
-          currentCloudMindmapId: record.id,
-        });
-      },
-      saveToCloud: async () => {
-        const { currentCloudMindmapId, edges, nodes } = get();
-        const payload = {
-          title: getCloudMindmapTitle(nodes),
-          nodes,
-          edges,
-        };
-
-        const requestPayload = currentCloudMindmapId
-          ? {
-              ...payload,
-              id: currentCloudMindmapId,
-            }
-          : payload;
-
-        const response = currentCloudMindmapId
-          ? await client.api.mindmap[':id'].$put({
-              param: {
-                id: currentCloudMindmapId,
-              },
-              json: requestPayload,
-            })
-          : await client.api.mindmap.$post({
-              json: requestPayload,
-            });
-
-        if (!response.ok) {
-          throw new Error(`クラウドへの保存に失敗しました: ${response.status}`);
-        }
-
-        const savedMindmap: CloudMindmapSummary = await response.json();
-
-        set({
-          currentCloudMindmapId: savedMindmap.id,
-        });
-
-        await get().fetchCloudMindmaps();
       },
       removeNode: (nodeId) => {
         if (nodeId === ROOT_NODE_ID) {
