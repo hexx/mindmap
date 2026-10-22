@@ -41,7 +41,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "happy-dom": "^20.10.2",
-    "jsdom": "^29.0.0",
+    "jsdom": "^30.0.0",
     "oxlint": "^1.69.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^7.0.0",
